@@ -4,3 +4,4 @@ LDL ECX,4
 MOV EDX,DS
 SYS 0x01
 ADD EDX,4
+stop
