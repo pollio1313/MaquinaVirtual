@@ -1,7 +1,18 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+struct operandos {
+    int cod;
+    char *tipo;
+    int cantBytes; 
+};
 
+const struct operandos tablaOperandos[] = {
+    {0,"ninguno",0},
+    {1,"registro",1},
+    {2,"inmediato",2},
+    {3,"memoria",3}
+};
 struct Instruccion {
     char *nombre;       //esta sirve por ahrao, pero en realidad tendria que ser punteros a funciones con cada metodo
     unsigned char codigo;
@@ -67,7 +78,7 @@ void Lectura(unsigned char MemoriaPrincipal[][4]){
 
 void MostrarCodigo(unsigned char MemoriaPrincipal[][4]){
     int i;
-    unsigned char codOperacion;
+    unsigned char codOperacion,OperandoA,OperandoB;
     for( i=0;i<=4;i++){
         printf("%c",MemoriaPrincipal[i][3]);            //primeros 5 bytes el VMX
     }
@@ -76,9 +87,18 @@ void MostrarCodigo(unsigned char MemoriaPrincipal[][4]){
     i+=2;
     printf(" %02X%02X \n",MemoriaPrincipal[i-1][3],MemoriaPrincipal[i][3]);
     int largo = MemoriaPrincipal[i-1][3]+MemoriaPrincipal[i][3];                //esta suma taria bien?
-    for (int j=i+1;j<=largo;j++){
+    for (int j=i+1;j<=largo;j++){                                               //este es el for q recorre el copdigo y lo muestra
         codOperacion= MemoriaPrincipal[j][3] & 0x1F;                            //aplico una mascara, para sacarle los ultimos 5 bits y asi tenes el codigo de operacion
+        if (tablaInstrucciones[codOperacion].cantOP==1){
+            OperandoA=MemoriaPrincipal[j][3] >>6; 
+        }
+        else if (tablaInstrucciones[codOperacion].cantOP==1){                   //se fija cuantos bytes chupa cada operando
+            OperandoB=MemoriaPrincipal[j][3] >>6;
+            OperandoA=(MemoriaPrincipal[j][3] >>4) & 0x03;
+        }
+        //si es por ejemplo memoria, como se leeria? osea el operando es de tipo 11, lee el priemr byte y lo pone ---B luego el segundo --BB o como?
         printf("\n %s",tablaInstrucciones[codOperacion].nombre);
+        
     }
 }
 
