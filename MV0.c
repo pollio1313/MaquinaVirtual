@@ -77,8 +77,8 @@ void Lectura(unsigned char MemoriaPrincipal[][4]){
 }
 
 void MostrarCodigo(unsigned char MemoriaPrincipal[][4]){
-    int i;
-    unsigned char codOperacion,OperandoA,OperandoB;
+    int i,j,cant;
+    unsigned char codOperacion,OperandoA,OperandoB,valorOPA[3]={0},valorOPB[3]={0};
     for( i=0;i<=4;i++){
         printf("%c",MemoriaPrincipal[i][3]);            //primeros 5 bytes el VMX
     }
@@ -87,19 +87,36 @@ void MostrarCodigo(unsigned char MemoriaPrincipal[][4]){
     i+=2;
     printf(" %02X%02X \n",MemoriaPrincipal[i-1][3],MemoriaPrincipal[i][3]);
     int largo = MemoriaPrincipal[i-1][3]+MemoriaPrincipal[i][3];                //esta suma taria bien?
-    for (int j=i+1;j<=largo;j++){                                               //este es el for q recorre el copdigo y lo muestra
+    j=i+1;
+    while(j<=largo){                                                            //este es el while q recorre el copdigo y lo muestra
         codOperacion= MemoriaPrincipal[j][3] & 0x1F;                            //aplico una mascara, para sacarle los ultimos 5 bits y asi tenes el codigo de operacion
-        if (tablaInstrucciones[codOperacion].cantOP==1){
+        cant =tablaInstrucciones[codOperacion].cantOP;
+        if (cant==1){
             OperandoA=MemoriaPrincipal[j][3] >>6; 
         }
-        else if (tablaInstrucciones[codOperacion].cantOP==1){                   //se fija cuantos bytes chupa cada operando
+        else if (cant==2){                   //se fija cuantos bytes chupa cada operando
             OperandoB=MemoriaPrincipal[j][3] >>6;
             OperandoA=(MemoriaPrincipal[j][3] >>4) & 0x03;
         }
-        //si es por ejemplo memoria, como se leeria? osea el operando es de tipo 11, lee el priemr byte y lo pone ---B luego el segundo --BB o como?
-        printf("\n %s",tablaInstrucciones[codOperacion].nombre);
+        else if (cant==0){                   //esta linea esta de mas, porq ya deberian valer 0 de antes
+            OperandoA=OperandoB=0;    
+        }
         
+        for(int q=0;q<OperandoB;q++){                 //while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
+            j++;                                         //parece qprimero viene el byte mas signfiquitaivo
+            valorOPB[q]=MemoriaPrincipal[j][3]; 
+            //printf("      valor[%d]=%02X q%d  ",q,valorOPB[q],q);           
+        }
+        for(int q=0;q<OperandoA;q++){                 //while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
+            j++;
+            valorOPA[q]=MemoriaPrincipal[j][3];            
+        }
+        printf("\n %s",tablaInstrucciones[codOperacion].nombre);
+        printf("  %02X%02X%02X,%02X%02X%02X",valorOPA[0],valorOPA[1],valorOPA[2],valorOPB[0],valorOPB[1],valorOPB[2]);      //esta mierda es de prueba, hay q hacer codicional de la cantidad de bytes del operando
+        
+        j++;
     }
+    printf("\nj:%d",j);
 }
 
 
