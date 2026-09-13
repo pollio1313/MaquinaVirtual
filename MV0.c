@@ -120,11 +120,33 @@ void MostrarCodigo(unsigned char MemoriaPrincipal[][4]){
 }
 
 
-void main(){
+void main(int argc, char argv[]){
     //con [][4] estarian separas byte a byte, sino 32 y estarian bit a bit
     int Registros[17][4];                      //para la proxima es de 32x32, ahora solo usamos 17//deberian ser booleanos?
     unsigned char MemoriaPrincipal[4096][4];            //mismo   16384 bytes tomados de a 4 
     int TablaSegmentos[8][4];                  //0 cs, 1 ds,
+
+
+    // argv[0] = nombre del propio programa (ej: "./vmx"), siempre está
+    // argv[1] = filename.vmx (obligatorio)
+    // argv[2] = "-d" (opcional)
+    if (argc < 2) {
+        printf("Uso: vmx filename.vmx [-d]\n");
+    }
+    else{
+        filename = argv[1];
+        int mostrar_disassembler = 0;
+
+        if (argc >= 3 && strcmp(argv[2], "-d") == 0) {
+            mostrar_disassembler = 1;
+        }
+
+        printf("Archivo a ejecutar: %s\n", filename);
+        printf("Modo disassembler: %s\n", mostrar_disassembler ? "SI" : "NO");
+
+        // Acá seguiría: abrir el archivo, leer la cabecera, cargar en memoria,
+        // ejecutar (y si mostrar_disassembler, imprimir el disassembler)
+    }
 
 
     Lectura(MemoriaPrincipal);
