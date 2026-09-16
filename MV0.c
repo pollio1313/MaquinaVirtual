@@ -15,7 +15,7 @@ const struct operandos tablaOperandos[] = {
 };
 struct Instruccion {
     char *nombre;       //esta sirve por ahrao, pero en realidad tendria que ser punteros a funciones con cada metodo
-    unsigned char codigo;
+    char codigo;
     int cantOP;
 };                          
 
@@ -54,12 +54,12 @@ const struct Instruccion tablaInstrucciones[] = {
     {"RND",  0x1F, 2}
 };
 
-char posReg(unsigned char pos){             //totalmente incompleta, pero para acordarme, habria q hacerlo como la de instrucciones
+char posReg(char pos){             //totalmente incompleta, pero para acordarme, habria q hacerlo como la de instrucciones
     
 }
 
 
-void Lectura(unsigned char MemoriaPrincipal[][4]){
+void Lectura(char MemoriaPrincipal[][4]){
     FILE *archivoVMX;
     int i=0;
 
@@ -68,7 +68,7 @@ void Lectura(unsigned char MemoriaPrincipal[][4]){
         printf("NO SE ABRIO CAPO");
     }
     else{
-        while(fread(&MemoriaPrincipal[i][3],sizeof(unsigned char),1,archivoVMX)==1){
+        while(fread(&MemoriaPrincipal[i][3],sizeof(char),1,archivoVMX)==1){
             MemoriaPrincipal[i][2]=MemoriaPrincipal[i][1]=MemoriaPrincipal[i][0]=0;
             i++;
         }
@@ -76,9 +76,9 @@ void Lectura(unsigned char MemoriaPrincipal[][4]){
     }
 }
 
-void MostrarCodigo(unsigned char MemoriaPrincipal[][4]){
+void MostrarCodigo(char MemoriaPrincipal[][4]){
     int i,j,cant;
-    unsigned char codOperacion,OperandoA,OperandoB,valorOPA[3]={0},valorOPB[3]={0};
+    char codOperacion,OperandoA,OperandoB,valorOPA[3]={0},valorOPB[3]={0};
     for( i=0;i<=4;i++){
         printf("%c",MemoriaPrincipal[i][3]);            //primeros 5 bytes el VMX
     }
@@ -122,9 +122,9 @@ void MostrarCodigo(unsigned char MemoriaPrincipal[][4]){
 
 void main(int argc, char argv[]){
     //con [][4] estarian separas byte a byte, sino 32 y estarian bit a bit
-    int Registros[17][4];                      //para la proxima es de 32x32, ahora solo usamos 17//deberian ser booleanos?
-    unsigned char MemoriaPrincipal[4096][4];            //mismo   16384 bytes tomados de a 4 
-    int TablaSegmentos[8][4];                  //0 cs, 1 ds,
+    char Registros[17][4];                      //para la proxima es de 32x32, ahora solo usamos 17//deberian ser booleanos?
+    char MemoriaPrincipal[4096][4];            //mismo   16384 bytes tomados de a 4 
+    char TablaSegmentos[8][4];                  //0 cs, 1 ds,
 
 
     // argv[0] = nombre del propio programa (ej: "./vmx"), siempre está
