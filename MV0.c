@@ -54,9 +54,40 @@ const struct Instruccion tablaInstrucciones[] = {
     {"RND",  0x1F, 2}
 };
 
-char posReg(char pos){             //totalmente incompleta, pero para acordarme, habria q hacerlo como la de instrucciones
-    
-}
+const char *tablaRegistros[32] = {          //la tabla de registros, solamente devuelve el nombre, es apra la muestra, quizas habria q pasarla a estructura, para poner punteros a func
+    "IP",       // 0
+    "OPC",      // 1
+    "OP1",      // 2
+    "OP2",      // 3
+    "LAR",      // 4
+    "MAR",      // 5
+    "MBR",      // 6
+    "Reservado",// 7
+    "Reservado",// 8
+    "Reservado",// 9
+    "EAX",      // 10
+    "EBX",      // 11
+    "ECX",      // 12
+    "EDX",      // 13
+    "EEX",      // 14
+    "EFX",      // 15
+    "AC",       // 16
+    "CC",       // 17
+    "Reservado",// 18
+    "Reservado",// 19
+    "Reservado",// 20
+    "Reservado",// 21
+    "Reservado",// 22
+    "Reservado",// 23
+    "Reservado",// 24
+    "Reservado",// 25
+    "CS",       // 26
+    "DS",       // 27
+    "Reservado",// 28
+    "Reservado",// 29
+    "Reservado",// 30
+    "Programa"  // 31
+};
 
 
 void Lectura(char MemoriaPrincipal[][4]){
@@ -75,6 +106,11 @@ void Lectura(char MemoriaPrincipal[][4]){
         fclose(archivoVMX);
     }
 }
+void MostrarBinario(char byte) {                    //esto es solo para hacer pruebas, esta prompeado
+    for (int i = 7; i >= 0; i--) {
+        printf("%d", (byte >> i) & 1);
+    }
+}
 
 void MostrarCodigo(char MemoriaPrincipal[][4]){
     int i,j,cant;
@@ -85,48 +121,84 @@ void MostrarCodigo(char MemoriaPrincipal[][4]){
     
     printf(" %02X",MemoriaPrincipal[i][3]);               //muestra la version
     i+=2;
-    printf(" %02X%02X \n",MemoriaPrincipal[i-1][3],MemoriaPrincipal[i][3]);
-    int largo = MemoriaPrincipal[i-1][3]+MemoriaPrincipal[i][3];                //esta suma taria bien?
+    printf(" %02X%02X \n",MemoriaPrincipal[i-1][3],MemoriaPrincipal[i][3]);  //muestra cnt de lineas
+    int largo = (MemoriaPrincipal[i-1][3]<<8) | MemoriaPrincipal[i][3];                //priomero shifteo al mas significativo y le clavo un or con el menos
+    printf("(%d)",largo);
     j=i+1;
-    while(j<=largo){                                                            //este es el while q recorre el copdigo y lo muestra
+    while(j<=largo+i){                                                            //este es el while q recorre el copdigo y lo muestra la condicion es j<CS
         codOperacion= MemoriaPrincipal[j][3] & 0x1F;                            //aplico una mascara, para sacarle los ultimos 5 bits y asi tenes el codigo de operacion
+        char operacion =MemoriaPrincipal[j][3];
         cant =tablaInstrucciones[codOperacion].cantOP;
-        if (cant==1){
-            OperandoA=MemoriaPrincipal[j][3] >>6; 
+        /*
+        printf("\n");
+        MostrarBinario(operacion);
+        printf("\n"); */
+
+        printf("\n %s   ",tablaInstrucciones[codOperacion].nombre);
+        if (cant==01){
+            OperandoA=operacion >>6 & 0x03; 
+            for(int q=0;q<OperandoA;q++){                 //while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
+                j++;
+                valorOPA[q]=MemoriaPrincipal[j][3];
+                printf("%02X",valorOPA[q]);            
+            }
         }
-        else if (cant==2){                   //se fija cuantos bytes chupa cada operando
-            OperandoB=MemoriaPrincipal[j][3] >>6;
-            OperandoA=(MemoriaPrincipal[j][3] >>4) & 0x03;
+        else if (cant==02){                   //se fija cuantos bytes chupa cada operando
+            OperandoB=(operacion >>6) & 0x03;
+            for(int q=0;q<OperandoB;q++){               
+                j++;                                         //parece qprimero viene el byte mas signfiquitaivo
+                valorOPB[q]=MemoriaPrincipal[j][3]; 
+            }
+            OperandoA=(operacion >>4) & 0x03;
+            for(int q=0;q<OperandoA;q++){ 
+                j++;
+                valorOPA[q]=MemoriaPrincipal[j][3];          
+            }
+            if (OperandoA==01){
+                printf("%s",tablaRegistros[valorOPA[0]]);
+            }
+            else{
+                for(int q=0;q<OperandoA;q++){                 
+                    printf("%02X",valorOPA[q]);          
+                }
+            }
+            printf(",");
+            if (OperandoB==01){
+                printf("%s",tablaRegistros[valorOPB[0]]);
+            }
+            else{
+                for(int q=0;q<OperandoB;q++){                 
+                    printf("%02X",valorOPB[q]);
+                }
+            }
+
         }
-        else if (cant==0){                   //esta linea esta de mas, porq ya deberian valer 0 de antes
+        else if (cant==00){                   //esta linea esta de mas, porq ya deberian valer 0 de antes
             OperandoA=OperandoB=0;    
         }
-        
-        for(int q=0;q<OperandoB;q++){                 //while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
-            j++;                                         //parece qprimero viene el byte mas signfiquitaivo
-            valorOPB[q]=MemoriaPrincipal[j][3]; 
-            //printf("      valor[%d]=%02X q%d  ",q,valorOPB[q],q);           
-        }
-        for(int q=0;q<OperandoA;q++){                 //while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
-            j++;
-            valorOPA[q]=MemoriaPrincipal[j][3];            
-        }
-        printf("\n %s",tablaInstrucciones[codOperacion].nombre);
-        printf("  %02X%02X%02X,%02X%02X%02X",valorOPA[0],valorOPA[1],valorOPA[2],valorOPB[0],valorOPB[1],valorOPB[2]);      //esta mierda es de prueba, hay q hacer codicional de la cantidad de bytes del operando
         
         j++;
     }
     printf("\nj:%d",j);
 }
 
+void AsignarSegmentos(char MemoriaPrincipal[][4],char TablaSegmentos[8],char Registros[][4]){             //aca deberia cargar la tabal de segmentos, pero me perdi
 
+    TablaSegmentos[0]=MemoriaPrincipal[7][0]; //podria ser 7 y DS=(MemoriaPrincipal[5][3]<<8) | MemoriaPrincipal[6][3]][0] +7 //deberia ser asi o con q guarde el valor de i seria suficiente?
+    TablaSegmentos[1]=MemoriaPrincipal[(MemoriaPrincipal[5][3]<<8) | MemoriaPrincipal[6][3]][0];
+
+    Registros[26][0]=Registros[26][1]=Registros[26][2]=Registros[26][3]; //CS los primeros 16 bits apuntan a la posicion de la tabla de segmentos 0, y los otros van con 0
+    Registros[27][1]=1;  // DS apunta a la posicion 01 y el resto 0
+    Registros[27][2]=Registros[27][3]=Registros[27][0]=0;
+    
+}
 void main(int argc, char argv[]){
     //con [][4] estarian separas byte a byte, sino 32 y estarian bit a bit
-    char Registros[17][4];                      //para la proxima es de 32x32, ahora solo usamos 17//deberian ser booleanos?
+    char Registros[32][4];                      
     char MemoriaPrincipal[4096][4];            //mismo   16384 bytes tomados de a 4 
-    char TablaSegmentos[8][4];                  //0 cs, 1 ds,
+    char *TablaSegmentos[8];                  //0 cs, 1 ds,
 
-
+/*
     // argv[0] = nombre del propio programa (ej: "./vmx"), siempre está
     // argv[1] = filename.vmx (obligatorio)
     // argv[2] = "-d" (opcional)
@@ -134,7 +206,7 @@ void main(int argc, char argv[]){
         printf("Uso: vmx filename.vmx [-d]\n");
     }
     else{
-        filename = argv[1];
+        filename = argv[1];                 //no se tipo es esto (sam lo creo xd), comente toda la linea para poder probar
         int mostrar_disassembler = 0;
 
         if (argc >= 3 && strcmp(argv[2], "-d") == 0) {
@@ -147,9 +219,10 @@ void main(int argc, char argv[]){
         // Acá seguiría: abrir el archivo, leer la cabecera, cargar en memoria,
         // ejecutar (y si mostrar_disassembler, imprimir el disassembler)
     }
-
+*/
 
     Lectura(MemoriaPrincipal);
+    AsignarSegmentos(MemoriaPrincipal,TablaSegmentos,Registros);
     MostrarCodigo(MemoriaPrincipal);
     
 
