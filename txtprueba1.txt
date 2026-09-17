@@ -1,0 +1,8 @@
+E:\Facultad\arqui\MV>vmt prueba1.asm [prueba1.vmx]
+[0000] 90 00 01 0A          |                   MOV        EAX,          1
+[0004] 9E 00 01 0C          |                   LDH        ECX,          1
+[0008] 9D 00 04 0C          |                   LDL        ECX,          4
+[000C] 50 1B 0D             |                   MOV        EDX,         DS
+[000F] 80 00 01             |                   SYS          1
+[0012] 91 00 04 0D          |                   ADD        EDX,          4
+[0016] 0F                   |                  stop
