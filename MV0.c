@@ -134,7 +134,7 @@ void main(int argc, char argv[]){
         printf("Uso: vmx filename.vmx [-d]\n");
     }
     else{
-        filename = argv[1];
+        char *filename = argv[1];
         int mostrar_disassembler = 0;
 
         if (argc >= 3 && strcmp(argv[2], "-d") == 0) {
