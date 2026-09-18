@@ -96,7 +96,7 @@ const char *tablaRegistros[32] = {          //la tabla de registros, solamente d
 };
 
 
-void Lectura(unsigned char MemoriaPrincipal[],const char *filename){
+void Lectura(unsigned char MemoriaPrincipal[],const char *filename){ //Le pasamos el tipo archivo de una
     FILE *archivoVMX;
     int i=0;
 
@@ -105,10 +105,11 @@ void Lectura(unsigned char MemoriaPrincipal[],const char *filename){
         printf("NO SE ABRIO CAPO");
     }
     else{
-        fread(MemoriaPrincipal, sizeof(unsigned char), 16384, archivoVMX);
+        fread(MemoriaPrincipal, sizeof(unsigned char), 16384, archivoVMX); //Sin while, lo puede leer de una y ubicarlo en la direccion de memoria
         fclose(archivoVMX);
     }
 }
+
 void MostrarBinario(char byte) {                    //esto es solo para hacer pruebas, esta prompeado
     for (int i = 7; i >= 0; i--) {
         printf("%d", (byte >> i) & 1);
@@ -146,46 +147,43 @@ void MostrarCodigo(unsigned char MemoriaPrincipal[]){
                 printf("%02X",valorOPA[q]);
             }
         }
-        else if (cant==02){                   //se fija cuantos bytes chupa cada operando
-            OperandoB=(operacion >>6) & 0x03;
-            for(int q=0;q<OperandoB;q++){
-                j++;                                         //parece qprimero viene el byte mas signfiquitaivo
-                valorOPB[q]=MemoriaPrincipal[j];
-            }
-            OperandoA=(operacion >>4) & 0x03;
-            for(int q=0;q<OperandoA;q++){
-                j++;
-                valorOPA[q]=MemoriaPrincipal[j];
-            }
-            if (OperandoA==01){
-                printf("%s",tablaRegistros[valorOPA[0]]);
-            }
-            else{
-                for(int q=0;q<OperandoA;q++){
-                    printf("%02X",valorOPA[q]);
-                }
-            }
-            printf(",");
-            if (OperandoB==01){
-                printf("%s",tablaRegistros[valorOPB[0]]);
-            }
-            else{
+        else
+            if (cant==02){                   //se fija cuantos bytes chupa cada operando
+                OperandoB=(operacion >>6) & 0x03;
                 for(int q=0;q<OperandoB;q++){
-                    printf("%02X",valorOPB[q]);
+                    j++;                                         //parece qprimero viene el byte mas signfiquitaivo
+                    valorOPB[q]=MemoriaPrincipal[j];
                 }
-            }
-
-        }
-        else if (cant==00){                   //esta linea esta de mas, porq ya deberian valer 0 de antes
-            OperandoA=OperandoB=0;
-        }
-
+                OperandoA=(operacion >>4) & 0x03;
+                for(int q=0;q<OperandoA;q++){
+                    j++;
+                    valorOPA[q]=MemoriaPrincipal[j];
+                }
+                if (OperandoA==01){
+                    printf("%s",tablaRegistros[valorOPA[0]]);
+                }else{
+                    for(int q=0;q<OperandoA;q++){
+                        printf("%02X",valorOPA[q]);
+                    }
+                }
+                printf(",");
+                if (OperandoB==01){
+                    printf("%s",tablaRegistros[valorOPB[0]]);
+                }else{
+                    for(int q=0;q<OperandoB;q++){
+                        printf("%02X",valorOPB[q]);
+                    }
+                }
+            }else
+                if (cant==00){                   //esta linea esta de mas, porq ya deberian valer 0 de antes
+                    OperandoA=OperandoB=0;
+                }
         j++;
     }
     printf("\nj:%d",j);
 }
 
-void AsignarSegmentos(unsigned char MemoriaPrincipal[],Segmento TablaSegmentos[8],int Registros[]){
+void AsignarSegmentos(unsigned char MemoriaPrincipal[],Segmento TablaSegmentos[],int Registros[]){
     int largo=(MemoriaPrincipal[6]<<8) | MemoriaPrincipal[7];
 
     TablaSegmentos[0].base = 0;
@@ -197,6 +195,7 @@ void AsignarSegmentos(unsigned char MemoriaPrincipal[],Segmento TablaSegmentos[8
     Registros[26] = 0; //CS apuntan a la posicion 0
     Registros[27] = 1; // DS apunta a la posicion 1
 }
+
 int main(int argc, char *argv[]){
 
     int Registros[32]={0};                          //Int ya ocupa 4bytes
@@ -204,12 +203,14 @@ int main(int argc, char *argv[]){
     Segmento TablaSegmentos[8];                  //0 cs, 1 ds,
 
     const char *filename;
-
+    // argv[0] = nombre del propio programa (ej: "./vmx"), siempre está
+    // argv[1] = filename.vmx (obligatorio)
+    // argv[2] = "-d" (opcional)
     if (argc < 2) {
         printf("Uso: vmx filename.vmx [-d]\n");
     }
     else{
-        filename = argv[1];
+        filename = argv[1];                 //no se tipo es esto (sam lo creo xd), comente toda la linea para poder probar
         int mostrar_disassembler = 0;
 
         if (argc >= 3 && strcmp(argv[2], "-d") == 0) {
