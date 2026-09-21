@@ -202,7 +202,7 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
     Registros[0]=Registros[26]; //IP se inicia aputando a la primera instruccion del codigo, mismo valor que CS
 
 
-    while (Registros[0] < TablaSegmentos[0].size){ //Se itera hasta que IP apunte fuera del limite del segmento de codigo
+    while (Registros[0] >= 0 && Registros[0] < TablaSegmentos[0].size){ //Se itera hasta que IP apunte fuera del limite del segmento de codigo
         pos = 8 + Registros[0];
         codOperacion = Registros[1] = MemoriaPrincipal[pos] & 0x1F; //decodifico y guardo el codigo limpio en OPC
         cantOP = tablaInstrucciones[codOperacion].cantOP;
@@ -212,39 +212,60 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
         if (cantOP == 1){
             operandoA = (MemoriaPrincipal[pos] >> 6) & 0x03;
             Registros[2] = operandoA << 24; //guardamos OP A en OP1 son de 32 bits
-            if (operandoA = 1){
+
+            if (operandoA == 1){
                 Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
             }else
-                if (operando = 2){
+                if (operandoA == 2){
+                    Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
+                    Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                }else{
+                    Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 16);
                     Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
                     Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
                 }
 
         }
+
         if (cantOP == 2){
             operandoB = (MemoriaPrincipal[pos] >> 6) & 0x03;
             operandoA = (MemoriaPrincipal[pos] >> 4) & 0x03;
             Registros[2] = operandoA << 24; //A en OP1
-            Registros[3] = ; operandoB << 24; //B en OP2
+            Registros[3] = operandoB << 24; //B en OP2
 
-            if (operandoB = 1){
+            if (operandoB == 1){
                 Registros[3] = Registros[3] | MemoriaPrincipal[++pos];
             }else
-                if (operandoB = 2){
+                if (operandoB == 2){
+                    Registros[3] = Registros[3] | (MemoriaPrincipal[++pos] << 8);
+                    Registros[3] = Registros[3] | MemoriaPrincipal[++pos];
+                }else{
+                    Registros[3] = Registros[3] | (MemoriaPrincipal[++pos] << 16);
                     Registros[3] = Registros[3] | (MemoriaPrincipal[++pos] << 8);
                     Registros[3] = Registros[3] | MemoriaPrincipal[++pos];
                 }
-
-            if (operandoA = 1){
+            if (operandoA == 1){
                 Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
             }else
-                if (operando = 2){
+                if (operandoA == 2){
+                    Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
+                    Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                }else{
+                    Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 16);
                     Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
                     Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
                 }
-
         }
 
+        //ejecucion
+        switch (codOperacion){
+            case 0x10: //Mov
+
+            case 0x0F: //Stop
+                pos = 6; //pone el pos/IP en -1 y corta el while
+                break;
+        }
+        Registros[0] = pos-7; //desfase de 8 bits
     }
 
 }
