@@ -1,5 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
+
+typedef struct {    // para organizar un segmento necesitamos anotar dos datos: donde empieza y cuanto mide
+    int base;
+    int size;
+} Segmento;
 
 //esta funcion necesita que le llegue 
 void MOV(char MemoriaPrincipal[],char Registros[][4],char OPA,char OPB,char tipoOPB){
@@ -17,7 +23,7 @@ void MOV(char MemoriaPrincipal[],char Registros[][4],char OPA,char OPB,char tipo
 struct operandos {
     int cod;
     char *tipo;
-    int cantBytes; 
+    int cantBytes;
 };
 
 const struct operandos tablaOperandos[] = {
@@ -30,7 +36,7 @@ struct Instruccion {
     char *nombre;       //esta sirve por ahrao, pero en realidad tendria que ser punteros a funciones con cada metodo
     char codigo;
     int cantOP;
-};                          
+};
 
 const struct Instruccion tablaInstrucciones[] = {
     {"SYS",  0x00, 1},
@@ -123,6 +129,7 @@ void Lectura(char MemoriaPrincipal[16384],char *cabecera){
         fclose(archivoVMX);
     }
 }
+
 void MostrarBinario(char byte) {                    //esto es solo para hacer pruebas, esta prompeado
     for (int i = 7; i >= 0; i--) {
         printf("%d", (byte >> i) & 1);
@@ -146,7 +153,7 @@ void MostrarCodigo(char MemoriaPrincipal[16384],char *cabecera){
 
         printf("\n %s   ",tablaInstrucciones[codOperacion].nombre);
         if (cant==01){
-            OperandoA=operacion >>6 & 0x03; 
+            OperandoA=operacion >>6 & 0x03;
             for(int q=0;q<OperandoA;q++){                 //while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
                 j++;
                 valorOPA[q]=MemoriaPrincipal[j];
@@ -171,50 +178,130 @@ void MostrarCodigo(char MemoriaPrincipal[16384],char *cabecera){
                 for(int q=0;q<OperandoA;q++){                 
                     printf("%02X",valorOPA[q]);          
                 }
-            }
-            printf(",");
-            if (OperandoB==01){
-                printf("%s",tablaRegistros[valorOPB[0]]);
-            }
-            else{
-                for(int q=0;q<OperandoB;q++){                 
-                    printf("%02X",valorOPB[q]);
+                OperandoA=(operacion >>4) & 0x03;
+                for(int q=0;q<OperandoA;q++){
+                    j++;
+                    valorOPA[q]=MemoriaPrincipal[j];
                 }
-            }
-
-        }
-        else if (cant==00){                   //esta linea esta de mas, porq ya deberian valer 0 de antes
-            OperandoA=OperandoB=0;    
-        }
-        
+                if (OperandoA==01){
+                    printf("%s",tablaRegistros[valorOPA[0]]);
+                }else{
+                    for(int q=0;q<OperandoA;q++){
+                        printf("%02X",valorOPA[q]);
+                    }
+                }
+                printf(",");
+                if (OperandoB==01){
+                    printf("%s",tablaRegistros[valorOPB[0]]);
+                }else{
+                    for(int q=0;q<OperandoB;q++){
+                        printf("%02X",valorOPB[q]);
+                    }
+                }
+            }else
+                if (cant==00){                   //esta linea esta de mas, porq ya deberian valer 0 de antes
+                    OperandoA=OperandoB=0;
+                }
         j++;
     }
     printf("\nj:%d",j);
 }
 
-void AsignarSegmentos(char MemoriaPrincipal[16384],char TablaSegmentos[][4],char Registros[][4],char *cabecera){             //aca deberia cargar la tabal de segmentos, pero me perdi
+void AsignarSegmentos(unsigned char MemoriaPrincipal[],Segmento TablaSegmentos[],int Registros[]){
+    int largo=(MemoriaPrincipal[6]<<8) | MemoriaPrincipal[7];
 
-    TablaSegmentos[0][0]=TablaSegmentos[0][1]=0;
-    TablaSegmentos[0][2]=TablaSegmentos[1][0]=cabecera[5];
-    TablaSegmentos[0][3]=TablaSegmentos[1][1]=cabecera[6];
-    int valor= 16384-((cabecera[5]<<8)& 0xFF00) -cabecera[6];
-    TablaSegmentos[1][2]=valor>>8 & 0xFF;
-    TablaSegmentos[1][3]=valor & 0xFF;
+    TablaSegmentos[0].base = 0;
+    TablaSegmentos[0].size = largo;
 
-    Registros[26][0]=Registros[26][1]=Registros[26][2]=Registros[26][3]; //CS los primeros 16 bits apuntan a la posicion de la tabla de segmentos 0, y los otros van con 0
-    Registros[27][1]=1;                                                  // DS apunta a la posicion 01 y el resto 0
-    Registros[27][2]=Registros[27][3]=Registros[27][0]=0;
-    
+    TablaSegmentos[1].base = largo;
+    TablaSegmentos[1].size = 16384-largo;
+
+    Registros[26] = 0; //CS apuntan a la posicion 0
+    Registros[27] = 1; // DS apunta a la posicion 1
 }
-void main(){
-    //con [][4] estarian separas byte a byte, sino 32 y estarian bit a bit
-    char Registros[32][4];                      
-    char MemoriaPrincipal[16384];            //mismo   16384 bytes tomados de a 4 
-    char TablaSegmentos[8][4];                  //0 cs, 1 ds,
-    char *cabecera;
 
-/*
-    // argv[0] = nombre del propio programa (ej: "./vmx"), siempre está
+void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[],int Registros[]){
+    char codOperacion,operandoA,operandoB;
+    int pos, cantOP;
+    Registros[0]=Registros[26]; //IP se inicia aputando a la primera instruccion del codigo, mismo valor que CS
+
+
+    while (Registros[0] >= 0 && Registros[0] < TablaSegmentos[0].size){ //Se itera hasta que IP apunte fuera del limite del segmento de codigo
+        pos = 8 + Registros[0];
+        codOperacion = Registros[1] = MemoriaPrincipal[pos] & 0x1F; //decodifico y guardo el codigo limpio en OPC
+        cantOP = tablaInstrucciones[codOperacion].cantOP;
+        if (cantOP == 0){
+            Registros[2] = Registros[3] = 0;
+        }
+        if (cantOP == 1){
+            operandoA = (MemoriaPrincipal[pos] >> 6) & 0x03;
+            Registros[2] = operandoA << 24; //guardamos OP A en OP1 son de 32 bits
+
+            if (operandoA == 1){
+                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+            }else
+                if (operandoA == 2){
+                    Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
+                    Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                }else{
+                    Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 16);
+                    Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
+                    Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                }
+
+        }
+
+        if (cantOP == 2){
+            operandoB = (MemoriaPrincipal[pos] >> 6) & 0x03;
+            operandoA = (MemoriaPrincipal[pos] >> 4) & 0x03;
+            Registros[2] = operandoA << 24; //A en OP1
+            Registros[3] = operandoB << 24; //B en OP2
+
+            if (operandoB == 1){
+                Registros[3] = Registros[3] | MemoriaPrincipal[++pos];
+            }else
+                if (operandoB == 2){
+                    Registros[3] = Registros[3] | (MemoriaPrincipal[++pos] << 8);
+                    Registros[3] = Registros[3] | MemoriaPrincipal[++pos];
+                }else{
+                    Registros[3] = Registros[3] | (MemoriaPrincipal[++pos] << 16);
+                    Registros[3] = Registros[3] | (MemoriaPrincipal[++pos] << 8);
+                    Registros[3] = Registros[3] | MemoriaPrincipal[++pos];
+                }
+            if (operandoA == 1){
+                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+            }else
+                if (operandoA == 2){
+                    Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
+                    Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                }else{
+                    Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 16);
+                    Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
+                    Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                }
+        }
+
+        //ejecucion
+        switch (codOperacion){
+            case 0x10: //Mov
+
+            case 0x0F: //Stop
+                pos = 6; //pone el pos/IP en -1 y corta el while
+                break;
+        }
+        Registros[0] = pos-7; //desfase de 8 bits
+    }
+
+}
+
+int main(int argc, char *argv[]){
+
+    int Registros[32]={0};                          //Int ya ocupa 4bytes
+    unsigned char MemoriaPrincipal[16384];     //La ram es unidimensional un byte tras otro
+    Segmento TablaSegmentos[8];                  //0 cs, 1 ds,
+
+    const char *filename;
+    // argv[0] = nombre del propio programa (ej: "./vmx"), siempre est�
     // argv[1] = filename.vmx (obligatorio)
     // argv[2] = "-d" (opcional)
     if (argc < 2) {
@@ -231,13 +318,14 @@ void main(){
         printf("Archivo a ejecutar: %s\n", filename);
         printf("Modo disassembler: %s\n", mostrar_disassembler ? "SI" : "NO");
 
-        // Acá seguiría: abrir el archivo, leer la cabecera, cargar en memoria,
+        // Ac� seguir�a: abrir el archivo, leer la cabecera, cargar en memoria,
         // ejecutar (y si mostrar_disassembler, imprimir el disassembler)
-    }
-*/
+        Lectura(MemoriaPrincipal,filename);
+        AsignarSegmentos(MemoriaPrincipal,TablaSegmentos,Registros);
 
-    Lectura(MemoriaPrincipal,cabecera);
-    AsignarSegmentos(MemoriaPrincipal,TablaSegmentos,Registros,cabecera);
-    MostrarCodigo(MemoriaPrincipal,cabecera);
-    
+        if (mostrar_disassembler)
+            MostrarCodigo(MemoriaPrincipal);
+    }
+    EjecutarMaquina(MemoriaPrincipal,TablaSegmentos,Registros);
+    return 0;
 }
