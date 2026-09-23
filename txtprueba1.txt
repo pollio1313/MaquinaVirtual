@@ -5,4 +5,51 @@ E:\Facultad\arqui\MV>vmt prueba1.asm [prueba1.vmx]
 [000C] 50 1B 0D             |                   MOV        EDX,         DS
 [000F] 80 00 01             |                   SYS          1
 [0012] 91 00 04 0D          |                   ADD        EDX,          4
+<<<<<<< HEAD
 [0016] 0F                   |                  stop
+=======
+[0016] 0F                   |                  stop
+
+para vos sam el punto de UD
+#c
+def Univocamente(C):
+    C=set(C)
+    anteriores=[]
+    S=set()
+    for x in C:
+        for y in C:
+            if x.startswith(y):
+                sufijo= x[len(y):]
+            if y.startswith(x):
+                sufijo=y[len(x):]
+            if sufijo != '':
+                S.add(sufijo)
+    fin=False
+    UD=True
+    while (not fin) and S:
+        #print("S=",S)
+        
+        #caso de S interseccion C
+        if S & C:
+            UD=False
+            fin=True
+        #caso que un sufijo este en otro S
+        elif any(S & anterior for anterior in anteriores):
+            UD=True
+            fin=True
+        else:
+            anteriores.append(S)
+            nuevo=set()
+            for x in S:
+                for y in C:
+                    #print("x: ",x,"  y: ",y)
+                    if x.startswith(y):
+                        sufijo= x[len(y):]
+                    if y.startswith(x):
+                        sufijo=y[len(x):]
+                        #print("sufijo:",sufijo)
+                    if sufijo !='':
+                        nuevo.add(sufijo)
+            S=nuevo
+    return UD
+>>>>>>> origin/main
