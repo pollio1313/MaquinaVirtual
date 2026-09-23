@@ -129,10 +129,12 @@ void MostrarBinario(char byte) {                    //esto es solo para hacer pr
     }
 }
 
-void MostrarCodigo(char MemoriaPrincipal[16384],char cabecera){
+void MostrarCodigo(char MemoriaPrincipal[16384],char *cabecera){
     int i,j,cant;
     char codOperacion,OperandoA,OperandoB,valorOPA[3]={0},valorOPB[3]={0};
     printf(cabecera);
+    int largo = (cabecera[6]<<8) | cabecera[7];                //priomero shifteo al mas significativo y le clavo un or con el menos
+    
     while(j<=largo+i){                                                            //este es el while q recorre el copdigo y lo muestra la condicion es j<CS
         codOperacion= MemoriaPrincipal[j] & 0x1F;                            //aplico una mascara, para sacarle los ultimos 5 bits y asi tenes el codigo de operacion
         char operacion =MemoriaPrincipal[j];
@@ -190,13 +192,17 @@ void MostrarCodigo(char MemoriaPrincipal[16384],char cabecera){
     printf("\nj:%d",j);
 }
 
-void AsignarSegmentos(char MemoriaPrincipal[16384],char TablaSegmentos[8],char Registros[][4]){             //aca deberia cargar la tabal de segmentos, pero me perdi
+void AsignarSegmentos(char MemoriaPrincipal[16384],char TablaSegmentos[][4],char Registros[][4],char *cabecera){             //aca deberia cargar la tabal de segmentos, pero me perdi
 
-    TablaSegmentos[0]=MemoriaPrincipal[7]; //podria ser 7 y DS=(MemoriaPrincipal[5][3]<<8) | MemoriaPrincipal[6][3]][0] +7 //deberia ser asi o con q guarde el valor de i seria suficiente?
-    TablaSegmentos[1]=MemoriaPrincipal[(MemoriaPrincipal[5]<<8) | MemoriaPrincipal[6]];
+    TablaSegmentos[0][0]=TablaSegmentos[0][1]=0;
+    TablaSegmentos[0][2]=TablaSegmentos[1][0]=cabecera[5];
+    TablaSegmentos[0][3]=TablaSegmentos[1][1]=cabecera[6];
+    int valor= 16384-(cabecera[5]<<8) -cabecera[6];
+    TablaSegmentos[1][2]=valor>>8 & 0xFF;
+    TablaSegmentos[1][3]=valor & 0xFF;
 
     Registros[26][0]=Registros[26][1]=Registros[26][2]=Registros[26][3]; //CS los primeros 16 bits apuntan a la posicion de la tabla de segmentos 0, y los otros van con 0
-    Registros[27][1]=1;  // DS apunta a la posicion 01 y el resto 0
+    Registros[27][1]=1;                                                  // DS apunta a la posicion 01 y el resto 0
     Registros[27][2]=Registros[27][3]=Registros[27][0]=0;
     
 }
@@ -204,7 +210,8 @@ void main(){
     //con [][4] estarian separas byte a byte, sino 32 y estarian bit a bit
     char Registros[32][4];                      
     char MemoriaPrincipal[16384];            //mismo   16384 bytes tomados de a 4 
-    char TablaSegmentos[8];                  //0 cs, 1 ds,
+    char TablaSegmentos[8][4];                  //0 cs, 1 ds,
+    char *cabecera;
 
 /*
     // argv[0] = nombre del propio programa (ej: "./vmx"), siempre está
@@ -229,8 +236,8 @@ void main(){
     }
 */
 
-    Lectura(MemoriaPrincipal);
-    AsignarSegmentos(MemoriaPrincipal,TablaSegmentos,Registros);
-    MostrarCodigo(MemoriaPrincipal);
+    Lectura(MemoriaPrincipal,cabecera);
+    AsignarSegmentos(MemoriaPrincipal,TablaSegmentos,Registros,cabecera);
+    MostrarCodigo(MemoriaPrincipal,cabecera);
     
 }
