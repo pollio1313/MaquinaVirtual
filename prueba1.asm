@@ -1,15 +1,7 @@
-<<<<<<< HEAD
-MOV EAX,0x01
-LDH ECX,1
-LDL ECX,4
-MOV EDX,DS
-SYS 0x01
-=======
 MOV EAX,1
 LDH ECX,1
 LDL ECX,4
 MOV EDX,DS
 SYS 1
->>>>>>> origin/main
 ADD EDX,4
 stop

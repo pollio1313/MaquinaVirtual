@@ -5,9 +5,6 @@ E:\Facultad\arqui\MV>vmt prueba1.asm [prueba1.vmx]
 [000C] 50 1B 0D             |                   MOV        EDX,         DS
 [000F] 80 00 01             |                   SYS          1
 [0012] 91 00 04 0D          |                   ADD        EDX,          4
-<<<<<<< HEAD
-[0016] 0F                   |                  stop
-=======
 [0016] 0F                   |                  stop
 
 para vos sam el punto de UD
@@ -52,4 +49,3 @@ def Univocamente(C):
                         nuevo.add(sufijo)
             S=nuevo
     return UD
->>>>>>> origin/main
