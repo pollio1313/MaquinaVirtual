@@ -7,6 +7,19 @@ typedef struct {    // para organizar un segmento necesitamos anotar dos datos: 
     int size;
 } Segmento;
 
+//esta funcion necesita que le llegue 
+void MOV(char MemoriaPrincipal[],char Registros[][4],char OPA,char OPB,char tipoOPB){
+    char plato;
+
+    if (tipoOPB==1){
+        Registros[OPB][3]=OPA;  // habria q revisar cuantos bytes ocupa el OPA
+    }
+    else if (tipoOPB==3){
+        MemoriaPrincipal[OPB]=OPA;
+    }
+
+}
+
 struct operandos {
     int cod;
     char *tipo;
@@ -96,16 +109,23 @@ const char *tablaRegistros[32] = {          //la tabla de registros, solamente d
 };
 
 
-void Lectura(unsigned char MemoriaPrincipal[],const char *filename){ //Le pasamos el tipo archivo de una
+void Lectura(char MemoriaPrincipal[16384],char *cabecera){
     FILE *archivoVMX;
-    int i=0;
-
-    archivoVMX=fopen(filename,"rb");        //abro el archivo vmx
+    int i=0,j=0;
+    archivoVMX=fopen("prueba1.vmx","r");        //abro el archivo vmx
     if (archivoVMX==NULL){
         printf("NO SE ABRIO CAPO");
     }
     else{
-        fread(MemoriaPrincipal, sizeof(unsigned char), 16384, archivoVMX); //Sin while, lo puede leer de una y ubicarlo en la direccion de memoria
+        fread(&cabecera,sizeof(char),8,archivoVMX); //leo la parte q dice version etc, y el largo del codigo
+        if (strcmp(cabecera,"VMX261",6)){           //solo corroboro al version
+            while(fread(&MemoriaPrincipal[i],sizeof(char),1,archivoVMX)==1){        //cargo en memoria solo el codigo en adelante
+                i++;
+            }
+        }
+        else{
+            printf("no se acepta esa version");
+        }
         fclose(archivoVMX);
     }
 }
@@ -116,20 +136,13 @@ void MostrarBinario(char byte) {                    //esto es solo para hacer pr
     }
 }
 
-void MostrarCodigo(unsigned char MemoriaPrincipal[]){
+void MostrarCodigo(char MemoriaPrincipal[16384],char *cabecera){
     int i,j,cant;
     char codOperacion,OperandoA,OperandoB,valorOPA[3]={0},valorOPB[3]={0};
-    for( i=0;i<=4;i++){
-        printf("%c",MemoriaPrincipal[i]);            //primeros 5 bytes el VMX
-    }
-
-    printf(" %02X",MemoriaPrincipal[5]);               //muestra la version
-
-    printf(" %02X%02X \n",MemoriaPrincipal[6],MemoriaPrincipal[7]);  //muestra cnt de lineas
-    int largo = (MemoriaPrincipal[6]<<8) | MemoriaPrincipal[7];                //priomero shifteo al mas significativo y le clavo un or con el menos
-    printf("(%d)",largo);
-    j=8;
-    while(j <= (largo+8)){                                                            //este es el while q recorre el copdigo y lo muestra la condicion es j<CS
+    printf(cabecera);
+    int largo = (cabecera[6]<<8) | cabecera[7];                //priomero shifteo al mas significativo y le clavo un or con el menos
+    
+    while(j<=largo+i){                                                            //este es el while q recorre el copdigo y lo muestra la condicion es j<CS
         codOperacion= MemoriaPrincipal[j] & 0x1F;                            //aplico una mascara, para sacarle los ultimos 5 bits y asi tenes el codigo de operacion
         char operacion =MemoriaPrincipal[j];
         cant =tablaInstrucciones[codOperacion].cantOP;
@@ -144,15 +157,26 @@ void MostrarCodigo(unsigned char MemoriaPrincipal[]){
             for(int q=0;q<OperandoA;q++){                 //while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
                 j++;
                 valorOPA[q]=MemoriaPrincipal[j];
-                printf("%02X",valorOPA[q]);
+                printf("%02X",valorOPA[q]);            
             }
         }
-        else
-            if (cant==02){                   //se fija cuantos bytes chupa cada operando
-                OperandoB=(operacion >>6) & 0x03;
-                for(int q=0;q<OperandoB;q++){
-                    j++;                                         //parece qprimero viene el byte mas signfiquitaivo
-                    valorOPB[q]=MemoriaPrincipal[j];
+        else if (cant==02){                   //se fija cuantos bytes chupa cada operando
+            OperandoB=(operacion >>6) & 0x03;
+            for(int q=0;q<OperandoB;q++){               
+                j++;                                         //parece qprimero viene el byte mas signfiquitaivo
+                valorOPB[q]=MemoriaPrincipal[j]; 
+            }
+            OperandoA=(operacion >>4) & 0x03;
+            for(int q=0;q<OperandoA;q++){ 
+                j++;
+                valorOPA[q]=MemoriaPrincipal[j];          
+            }
+            if (OperandoA==01){
+                printf("%s",tablaRegistros[valorOPA[0]]);
+            }
+            else{
+                for(int q=0;q<OperandoA;q++){                 
+                    printf("%02X",valorOPA[q]);          
                 }
                 OperandoA=(operacion >>4) & 0x03;
                 for(int q=0;q<OperandoA;q++){
@@ -277,7 +301,7 @@ int main(int argc, char *argv[]){
     Segmento TablaSegmentos[8];                  //0 cs, 1 ds,
 
     const char *filename;
-    // argv[0] = nombre del propio programa (ej: "./vmx"), siempre está
+    // argv[0] = nombre del propio programa (ej: "./vmx"), siempre estï¿½
     // argv[1] = filename.vmx (obligatorio)
     // argv[2] = "-d" (opcional)
     if (argc < 2) {
@@ -294,7 +318,7 @@ int main(int argc, char *argv[]){
         printf("Archivo a ejecutar: %s\n", filename);
         printf("Modo disassembler: %s\n", mostrar_disassembler ? "SI" : "NO");
 
-        // Acá seguiría: abrir el archivo, leer la cabecera, cargar en memoria,
+        // Acï¿½ seguirï¿½a: abrir el archivo, leer la cabecera, cargar en memoria,
         // ejecutar (y si mostrar_disassembler, imprimir el disassembler)
         Lectura(MemoriaPrincipal,filename);
         AsignarSegmentos(MemoriaPrincipal,TablaSegmentos,Registros);
