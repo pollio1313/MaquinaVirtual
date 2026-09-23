@@ -197,7 +197,7 @@ void AsignarSegmentos(char MemoriaPrincipal[16384],char TablaSegmentos[][4],char
     TablaSegmentos[0][0]=TablaSegmentos[0][1]=0;
     TablaSegmentos[0][2]=TablaSegmentos[1][0]=cabecera[5];
     TablaSegmentos[0][3]=TablaSegmentos[1][1]=cabecera[6];
-    int valor= 16384-(cabecera[5]<<8) -cabecera[6];
+    int valor= 16384-((cabecera[5]<<8)& 0xFF00) -cabecera[6];
     TablaSegmentos[1][2]=valor>>8 & 0xFF;
     TablaSegmentos[1][3]=valor & 0xFF;
 
