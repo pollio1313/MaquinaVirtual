@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 typedef struct {    // para organizar un segmento necesitamos anotar dos datos: donde empieza y cuanto mide
     int base;
@@ -109,19 +110,23 @@ const char *tablaRegistros[32] = {          //la tabla de registros, solamente d
 };
 
 
-void Lectura(char MemoriaPrincipal[16384],char *cabecera){
+void Lectura(char MemoriaPrincipal[16384],char *filename,char *cabecera,uint16_t *LargoCod){
     FILE *archivoVMX;
-    int i=0,j=0;
+    int i=0,j=0,valor;
     archivoVMX=fopen("prueba1.vmx","r");        //abro el archivo vmx
     if (archivoVMX==NULL){
         printf("NO SE ABRIO CAPO");
     }
     else{
-        fread(&cabecera,sizeof(char),8,archivoVMX); //leo la parte q dice version etc, y el largo del codigo
-        if (strcmp(cabecera,"VMX261",6)){           //solo corroboro al version
-            while(fread(&MemoriaPrincipal[i],sizeof(char),1,archivoVMX)==1){        //cargo en memoria solo el codigo en adelante
-                i++;
-            }
+        fread(cabecera,sizeof(char),6,archivoVMX); //leo la parte q dice version etc
+        cabecera[6]='\0';
+        char largo[2];
+        fread(largo,sizeof(char),2,archivoVMX);
+
+        *LargoCod = (largo[0] << 8) | largo[1];       //habia un problema con la lectura y ahroa lee los dos bytes y aca los une
+
+        if (strcmp(cabecera,"VMX261")==0){           //solo corroboro al version
+            fread(&MemoriaPrincipal[0],sizeof(char),*LargoCod,archivoVMX);        //cargo en memoria solo el codigo en adelante
         }
         else{
             printf("no se acepta esa version");
@@ -137,7 +142,7 @@ void MostrarBinario(char byte) {                    //esto es solo para hacer pr
 }
 
 void MostrarCodigo(char MemoriaPrincipal[16384],char *cabecera){
-    int i,j,cant;
+    int i=0,j=0,cant;
     char codOperacion,OperandoA,OperandoB,valorOPA[3]={0},valorOPB[3]={0};
     printf(cabecera);
     int largo = (cabecera[6]<<8) | cabecera[7];                //priomero shifteo al mas significativo y le clavo un or con el menos
@@ -185,7 +190,8 @@ void MostrarCodigo(char MemoriaPrincipal[16384],char *cabecera){
                 }
                 if (OperandoA==01){
                     printf("%s",tablaRegistros[valorOPA[0]]);
-                }else{
+                }
+                else{
                     for(int q=0;q<OperandoA;q++){
                         printf("%02X",valorOPA[q]);
                     }
@@ -193,20 +199,22 @@ void MostrarCodigo(char MemoriaPrincipal[16384],char *cabecera){
                 printf(",");
                 if (OperandoB==01){
                     printf("%s",tablaRegistros[valorOPB[0]]);
-                }else{
+                }
+                else{
                     for(int q=0;q<OperandoB;q++){
                         printf("%02X",valorOPB[q]);
                     }
                 }
-            }else
-                if (cant==00){                   //esta linea esta de mas, porq ya deberian valer 0 de antes
+            }
+        }
+        else if (cant==00){                   //esta linea esta de mas, porq ya deberian valer 0 de antes
                     OperandoA=OperandoB=0;
                 }
         j++;
-    }
+   
     printf("\nj:%d",j);
 }
-
+}
 void AsignarSegmentos(unsigned char MemoriaPrincipal[],Segmento TablaSegmentos[],int Registros[]){
     int largo=(MemoriaPrincipal[6]<<8) | MemoriaPrincipal[7];
 
@@ -299,6 +307,8 @@ int main(int argc, char *argv[]){
     int Registros[32]={0};                          //Int ya ocupa 4bytes
     unsigned char MemoriaPrincipal[16384];     //La ram es unidimensional un byte tras otro
     Segmento TablaSegmentos[8];                  //0 cs, 1 ds,
+    uint16_t LargoCod;
+    char cabecera[7];
 
     const char *filename;
     // argv[0] = nombre del propio programa (ej: "./vmx"), siempre est�
@@ -308,7 +318,7 @@ int main(int argc, char *argv[]){
         printf("Uso: vmx filename.vmx [-d]\n");
     }
     else{
-        filename = argv[1];                 //no se tipo es esto (sam lo creo xd), comente toda la linea para poder probar
+        filename = argv[1];                 
         int mostrar_disassembler = 0;
 
         if (argc >= 3 && strcmp(argv[2], "-d") == 0) {
@@ -320,11 +330,11 @@ int main(int argc, char *argv[]){
 
         // Ac� seguir�a: abrir el archivo, leer la cabecera, cargar en memoria,
         // ejecutar (y si mostrar_disassembler, imprimir el disassembler)
-        Lectura(MemoriaPrincipal,filename);
+        Lectura(MemoriaPrincipal, filename, cabecera, &LargoCod);
         AsignarSegmentos(MemoriaPrincipal,TablaSegmentos,Registros);
 
         if (mostrar_disassembler)
-            MostrarCodigo(MemoriaPrincipal);
+            MostrarCodigo(MemoriaPrincipal,cabecera);
     }
     EjecutarMaquina(MemoriaPrincipal,TablaSegmentos,Registros);
     return 0;
