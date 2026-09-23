@@ -1,23 +1,16 @@
 #include <stdlib.h>
 #include <stdio.h>
-<<<<<<< HEAD
 #include <string.h>
 
 typedef struct {    // para organizar un segmento necesitamos anotar dos datos: donde empieza y cuanto mide
     int base;
     int size;
 } Segmento;
-=======
->>>>>>> origin/main
 
 struct operandos {
     int cod;
     char *tipo;
-<<<<<<< HEAD
     int cantBytes;
-=======
-    int cantBytes; 
->>>>>>> origin/main
 };
 
 const struct operandos tablaOperandos[] = {
@@ -30,11 +23,7 @@ struct Instruccion {
     char *nombre;       //esta sirve por ahrao, pero en realidad tendria que ser punteros a funciones con cada metodo
     char codigo;
     int cantOP;
-<<<<<<< HEAD
 };
-=======
-};                          
->>>>>>> origin/main
 
 const struct Instruccion tablaInstrucciones[] = {
     {"SYS",  0x00, 1},
@@ -107,45 +96,26 @@ const char *tablaRegistros[32] = {          //la tabla de registros, solamente d
 };
 
 
-<<<<<<< HEAD
 void Lectura(unsigned char MemoriaPrincipal[],const char *filename){ //Le pasamos el tipo archivo de una
     FILE *archivoVMX;
     int i=0;
 
     archivoVMX=fopen(filename,"rb");        //abro el archivo vmx
-=======
-void Lectura(char MemoriaPrincipal[][4]){
-    FILE *archivoVMX;
-    int i=0;
-
-    archivoVMX=fopen("prueba1.vmx","r");        //abro el archivo vmx
->>>>>>> origin/main
     if (archivoVMX==NULL){
         printf("NO SE ABRIO CAPO");
     }
     else{
-<<<<<<< HEAD
         fread(MemoriaPrincipal, sizeof(unsigned char), 16384, archivoVMX); //Sin while, lo puede leer de una y ubicarlo en la direccion de memoria
         fclose(archivoVMX);
     }
 }
 
-=======
-        while(fread(&MemoriaPrincipal[i][3],sizeof(char),1,archivoVMX)==1){
-            MemoriaPrincipal[i][2]=MemoriaPrincipal[i][1]=MemoriaPrincipal[i][0]=0;
-            i++;
-        }
-        fclose(archivoVMX);
-    }
-}
->>>>>>> origin/main
 void MostrarBinario(char byte) {                    //esto es solo para hacer pruebas, esta prompeado
     for (int i = 7; i >= 0; i--) {
         printf("%d", (byte >> i) & 1);
     }
 }
 
-<<<<<<< HEAD
 void MostrarCodigo(unsigned char MemoriaPrincipal[]){
     int i,j,cant;
     char codOperacion,OperandoA,OperandoB,valorOPA[3]={0},valorOPB[3]={0};
@@ -162,24 +132,6 @@ void MostrarCodigo(unsigned char MemoriaPrincipal[]){
     while(j <= (largo+8)){                                                            //este es el while q recorre el copdigo y lo muestra la condicion es j<CS
         codOperacion= MemoriaPrincipal[j] & 0x1F;                            //aplico una mascara, para sacarle los ultimos 5 bits y asi tenes el codigo de operacion
         char operacion =MemoriaPrincipal[j];
-=======
-void MostrarCodigo(char MemoriaPrincipal[][4]){
-    int i,j,cant;
-    char codOperacion,OperandoA,OperandoB,valorOPA[3]={0},valorOPB[3]={0};
-    for( i=0;i<=4;i++){
-        printf("%c",MemoriaPrincipal[i][3]);            //primeros 5 bytes el VMX
-    }
-    
-    printf(" %02X",MemoriaPrincipal[i][3]);               //muestra la version
-    i+=2;
-    printf(" %02X%02X \n",MemoriaPrincipal[i-1][3],MemoriaPrincipal[i][3]);  //muestra cnt de lineas
-    int largo = (MemoriaPrincipal[i-1][3]<<8) | MemoriaPrincipal[i][3];                //priomero shifteo al mas significativo y le clavo un or con el menos
-    printf("(%d)",largo);
-    j=i+1;
-    while(j<=largo+i){                                                            //este es el while q recorre el copdigo y lo muestra la condicion es j<CS
-        codOperacion= MemoriaPrincipal[j][3] & 0x1F;                            //aplico una mascara, para sacarle los ultimos 5 bits y asi tenes el codigo de operacion
-        char operacion =MemoriaPrincipal[j][3];
->>>>>>> origin/main
         cant =tablaInstrucciones[codOperacion].cantOP;
         /*
         printf("\n");
@@ -188,7 +140,6 @@ void MostrarCodigo(char MemoriaPrincipal[][4]){
 
         printf("\n %s   ",tablaInstrucciones[codOperacion].nombre);
         if (cant==01){
-<<<<<<< HEAD
             OperandoA=operacion >>6 & 0x03;
             for(int q=0;q<OperandoA;q++){                 //while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
                 j++;
@@ -227,55 +178,11 @@ void MostrarCodigo(char MemoriaPrincipal[][4]){
                 if (cant==00){                   //esta linea esta de mas, porq ya deberian valer 0 de antes
                     OperandoA=OperandoB=0;
                 }
-=======
-            OperandoA=operacion >>6 & 0x03; 
-            for(int q=0;q<OperandoA;q++){                 //while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
-                j++;
-                valorOPA[q]=MemoriaPrincipal[j][3];
-                printf("%02X",valorOPA[q]);            
-            }
-        }
-        else if (cant==02){                   //se fija cuantos bytes chupa cada operando
-            OperandoB=(operacion >>6) & 0x03;
-            for(int q=0;q<OperandoB;q++){               
-                j++;                                         //parece qprimero viene el byte mas signfiquitaivo
-                valorOPB[q]=MemoriaPrincipal[j][3]; 
-            }
-            OperandoA=(operacion >>4) & 0x03;
-            for(int q=0;q<OperandoA;q++){ 
-                j++;
-                valorOPA[q]=MemoriaPrincipal[j][3];          
-            }
-            if (OperandoA==01){
-                printf("%s",tablaRegistros[valorOPA[0]]);
-            }
-            else{
-                for(int q=0;q<OperandoA;q++){                 
-                    printf("%02X",valorOPA[q]);          
-                }
-            }
-            printf(",");
-            if (OperandoB==01){
-                printf("%s",tablaRegistros[valorOPB[0]]);
-            }
-            else{
-                for(int q=0;q<OperandoB;q++){                 
-                    printf("%02X",valorOPB[q]);
-                }
-            }
-
-        }
-        else if (cant==00){                   //esta linea esta de mas, porq ya deberian valer 0 de antes
-            OperandoA=OperandoB=0;    
-        }
-        
->>>>>>> origin/main
         j++;
     }
     printf("\nj:%d",j);
 }
 
-<<<<<<< HEAD
 void AsignarSegmentos(unsigned char MemoriaPrincipal[],Segmento TablaSegmentos[],int Registros[]){
     int largo=(MemoriaPrincipal[6]<<8) | MemoriaPrincipal[7];
 
@@ -371,26 +278,6 @@ int main(int argc, char *argv[]){
 
     const char *filename;
     // argv[0] = nombre del propio programa (ej: "./vmx"), siempre está
-=======
-void AsignarSegmentos(char MemoriaPrincipal[][4],char TablaSegmentos[8],char Registros[][4]){             //aca deberia cargar la tabal de segmentos, pero me perdi
-
-    TablaSegmentos[0]=MemoriaPrincipal[7][0]; //podria ser 7 y DS=(MemoriaPrincipal[5][3]<<8) | MemoriaPrincipal[6][3]][0] +7 //deberia ser asi o con q guarde el valor de i seria suficiente?
-    TablaSegmentos[1]=MemoriaPrincipal[(MemoriaPrincipal[5][3]<<8) | MemoriaPrincipal[6][3]][0];
-
-    Registros[26][0]=Registros[26][1]=Registros[26][2]=Registros[26][3]; //CS los primeros 16 bits apuntan a la posicion de la tabla de segmentos 0, y los otros van con 0
-    Registros[27][1]=1;  // DS apunta a la posicion 01 y el resto 0
-    Registros[27][2]=Registros[27][3]=Registros[27][0]=0;
-    
-}
-void main(int argc, char argv[]){
-    //con [][4] estarian separas byte a byte, sino 32 y estarian bit a bit
-    char Registros[32][4];                      
-    char MemoriaPrincipal[4096][4];            //mismo   16384 bytes tomados de a 4 
-    char *TablaSegmentos[8];                  //0 cs, 1 ds,
-
-/*
-    // argv[0] = nombre del propio programa (ej: "./vmx"), siempre estÃ¡
->>>>>>> origin/main
     // argv[1] = filename.vmx (obligatorio)
     // argv[2] = "-d" (opcional)
     if (argc < 2) {
@@ -407,7 +294,6 @@ void main(int argc, char argv[]){
         printf("Archivo a ejecutar: %s\n", filename);
         printf("Modo disassembler: %s\n", mostrar_disassembler ? "SI" : "NO");
 
-<<<<<<< HEAD
         // Acá seguiría: abrir el archivo, leer la cabecera, cargar en memoria,
         // ejecutar (y si mostrar_disassembler, imprimir el disassembler)
         Lectura(MemoriaPrincipal,filename);
@@ -419,16 +305,3 @@ void main(int argc, char argv[]){
     EjecutarMaquina(MemoriaPrincipal,TablaSegmentos,Registros);
     return 0;
 }
-=======
-        // AcÃ¡ seguirÃ­a: abrir el archivo, leer la cabecera, cargar en memoria,
-        // ejecutar (y si mostrar_disassembler, imprimir el disassembler)
-    }
-*/
-
-    Lectura(MemoriaPrincipal);
-    AsignarSegmentos(MemoriaPrincipal,TablaSegmentos,Registros);
-    MostrarCodigo(MemoriaPrincipal);
-    
-
-}
->>>>>>> origin/main
