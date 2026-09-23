@@ -1,6 +1,19 @@
 #include <stdlib.h>
 #include <stdio.h>
 
+//esta funcion necesita que le llegue 
+void MOV(char MemoriaPrincipal[],char Registros[][4],char OPA,char OPB,char tipoOPB){
+    char plato;
+
+    if (tipoOPB==1){
+        Registros[OPB][3]=OPA;  // habria q revisar cuantos bytes ocupa el OPA
+    }
+    else if (tipoOPB==3){
+        MemoriaPrincipal[OPB]=OPA;
+    }
+
+}
+
 struct operandos {
     int cod;
     char *tipo;
@@ -90,18 +103,22 @@ const char *tablaRegistros[32] = {          //la tabla de registros, solamente d
 };
 
 
-void Lectura(char MemoriaPrincipal[][4]){
+void Lectura(char MemoriaPrincipal[16384],char *cabecera){
     FILE *archivoVMX;
-    int i=0;
-
+    int i=0,j=0;
     archivoVMX=fopen("prueba1.vmx","r");        //abro el archivo vmx
     if (archivoVMX==NULL){
         printf("NO SE ABRIO CAPO");
     }
     else{
-        while(fread(&MemoriaPrincipal[i][3],sizeof(char),1,archivoVMX)==1){
-            MemoriaPrincipal[i][2]=MemoriaPrincipal[i][1]=MemoriaPrincipal[i][0]=0;
-            i++;
+        fread(&cabecera,sizeof(char),8,archivoVMX); //leo la parte q dice version etc, y el largo del codigo
+        if (strcmp(cabecera,"VMX261",6)){           //solo corroboro al version
+            while(fread(&MemoriaPrincipal[i],sizeof(char),1,archivoVMX)==1){        //cargo en memoria solo el codigo en adelante
+                i++;
+            }
+        }
+        else{
+            printf("no se acepta esa version");
         }
         fclose(archivoVMX);
     }
@@ -112,22 +129,13 @@ void MostrarBinario(char byte) {                    //esto es solo para hacer pr
     }
 }
 
-void MostrarCodigo(char MemoriaPrincipal[][4]){
+void MostrarCodigo(char MemoriaPrincipal[16384],char cabecera){
     int i,j,cant;
     char codOperacion,OperandoA,OperandoB,valorOPA[3]={0},valorOPB[3]={0};
-    for( i=0;i<=4;i++){
-        printf("%c",MemoriaPrincipal[i][3]);            //primeros 5 bytes el VMX
-    }
-    
-    printf(" %02X",MemoriaPrincipal[i][3]);               //muestra la version
-    i+=2;
-    printf(" %02X%02X \n",MemoriaPrincipal[i-1][3],MemoriaPrincipal[i][3]);  //muestra cnt de lineas
-    int largo = (MemoriaPrincipal[i-1][3]<<8) | MemoriaPrincipal[i][3];                //priomero shifteo al mas significativo y le clavo un or con el menos
-    printf("(%d)",largo);
-    j=i+1;
+    printf(cabecera);
     while(j<=largo+i){                                                            //este es el while q recorre el copdigo y lo muestra la condicion es j<CS
-        codOperacion= MemoriaPrincipal[j][3] & 0x1F;                            //aplico una mascara, para sacarle los ultimos 5 bits y asi tenes el codigo de operacion
-        char operacion =MemoriaPrincipal[j][3];
+        codOperacion= MemoriaPrincipal[j] & 0x1F;                            //aplico una mascara, para sacarle los ultimos 5 bits y asi tenes el codigo de operacion
+        char operacion =MemoriaPrincipal[j];
         cant =tablaInstrucciones[codOperacion].cantOP;
         /*
         printf("\n");
@@ -139,7 +147,7 @@ void MostrarCodigo(char MemoriaPrincipal[][4]){
             OperandoA=operacion >>6 & 0x03; 
             for(int q=0;q<OperandoA;q++){                 //while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
                 j++;
-                valorOPA[q]=MemoriaPrincipal[j][3];
+                valorOPA[q]=MemoriaPrincipal[j];
                 printf("%02X",valorOPA[q]);            
             }
         }
@@ -147,12 +155,12 @@ void MostrarCodigo(char MemoriaPrincipal[][4]){
             OperandoB=(operacion >>6) & 0x03;
             for(int q=0;q<OperandoB;q++){               
                 j++;                                         //parece qprimero viene el byte mas signfiquitaivo
-                valorOPB[q]=MemoriaPrincipal[j][3]; 
+                valorOPB[q]=MemoriaPrincipal[j]; 
             }
             OperandoA=(operacion >>4) & 0x03;
             for(int q=0;q<OperandoA;q++){ 
                 j++;
-                valorOPA[q]=MemoriaPrincipal[j][3];          
+                valorOPA[q]=MemoriaPrincipal[j];          
             }
             if (OperandoA==01){
                 printf("%s",tablaRegistros[valorOPA[0]]);
@@ -182,21 +190,21 @@ void MostrarCodigo(char MemoriaPrincipal[][4]){
     printf("\nj:%d",j);
 }
 
-void AsignarSegmentos(char MemoriaPrincipal[][4],char TablaSegmentos[8],char Registros[][4]){             //aca deberia cargar la tabal de segmentos, pero me perdi
+void AsignarSegmentos(char MemoriaPrincipal[16384],char TablaSegmentos[8],char Registros[][4]){             //aca deberia cargar la tabal de segmentos, pero me perdi
 
-    TablaSegmentos[0]=MemoriaPrincipal[7][0]; //podria ser 7 y DS=(MemoriaPrincipal[5][3]<<8) | MemoriaPrincipal[6][3]][0] +7 //deberia ser asi o con q guarde el valor de i seria suficiente?
-    TablaSegmentos[1]=MemoriaPrincipal[(MemoriaPrincipal[5][3]<<8) | MemoriaPrincipal[6][3]][0];
+    TablaSegmentos[0]=MemoriaPrincipal[7]; //podria ser 7 y DS=(MemoriaPrincipal[5][3]<<8) | MemoriaPrincipal[6][3]][0] +7 //deberia ser asi o con q guarde el valor de i seria suficiente?
+    TablaSegmentos[1]=MemoriaPrincipal[(MemoriaPrincipal[5]<<8) | MemoriaPrincipal[6]];
 
     Registros[26][0]=Registros[26][1]=Registros[26][2]=Registros[26][3]; //CS los primeros 16 bits apuntan a la posicion de la tabla de segmentos 0, y los otros van con 0
     Registros[27][1]=1;  // DS apunta a la posicion 01 y el resto 0
     Registros[27][2]=Registros[27][3]=Registros[27][0]=0;
     
 }
-void main(int argc, char argv[]){
+void main(){
     //con [][4] estarian separas byte a byte, sino 32 y estarian bit a bit
     char Registros[32][4];                      
-    char MemoriaPrincipal[4096][4];            //mismo   16384 bytes tomados de a 4 
-    char *TablaSegmentos[8];                  //0 cs, 1 ds,
+    char MemoriaPrincipal[16384];            //mismo   16384 bytes tomados de a 4 
+    char TablaSegmentos[8];                  //0 cs, 1 ds,
 
 /*
     // argv[0] = nombre del propio programa (ej: "./vmx"), siempre está
@@ -225,5 +233,4 @@ void main(int argc, char argv[]){
     AsignarSegmentos(MemoriaPrincipal,TablaSegmentos,Registros);
     MostrarCodigo(MemoriaPrincipal);
     
-
 }
