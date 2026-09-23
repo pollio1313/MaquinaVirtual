@@ -113,23 +113,22 @@ const char *tablaRegistros[32] = {          //la tabla de registros, solamente d
 void Lectura(char MemoriaPrincipal[16384],char *filename,char *cabecera,uint16_t *LargoCod){
     FILE *archivoVMX;
     int i=0,j=0,valor;
-    archivoVMX=fopen("prueba1.vmx","r");        //abro el archivo vmx
+    archivoVMX=fopen(filename,"r");        //abro el archivo vmx
     if (archivoVMX==NULL){
         printf("NO SE ABRIO CAPO");
     }
     else{
         fread(cabecera,sizeof(char),6,archivoVMX); //leo la parte q dice version etc
-        cabecera[6]='\0';
         char largo[2];
         fread(largo,sizeof(char),2,archivoVMX);
 
         *LargoCod = (largo[0] << 8) | largo[1];       //habia un problema con la lectura y ahroa lee los dos bytes y aca los une
 
-        if (strcmp(cabecera,"VMX261")==0){           //solo corroboro al version
+        if ((strncmp(cabecera,"VMX26",5)==0) && (cabecera[5]==1)){           //solo corroboro al version
             fread(&MemoriaPrincipal[0],sizeof(char),*LargoCod,archivoVMX);        //cargo en memoria solo el codigo en adelante
         }
         else{
-            printf("no se acepta esa version");
+            printf("no se acepta esa version %s",cabecera);
         }
         fclose(archivoVMX);
     }
@@ -308,12 +307,14 @@ int main(int argc, char *argv[]){
     unsigned char MemoriaPrincipal[16384];     //La ram es unidimensional un byte tras otro
     Segmento TablaSegmentos[8];                  //0 cs, 1 ds,
     uint16_t LargoCod;
-    char cabecera[7];
+    char cabecera[6];
 
     const char *filename;
     // argv[0] = nombre del propio programa (ej: "./vmx"), siempre est�
     // argv[1] = filename.vmx (obligatorio)
     // argv[2] = "-d" (opcional)
+    //hay q compilar el maquina antes de usarla asi esta la ultima version
+    // en mi mac es         chmod +x vmx        gcc MV0.c -o vmx    ./vmx prueba1.vmx -d
     if (argc < 2) {
         printf("Uso: vmx filename.vmx [-d]\n");
     }
