@@ -52,6 +52,10 @@ void op_MOV(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorOrigen = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
     Registros[17] = 0;
+    if (valorOrigen == 0)
+        Registros[17] = Registros[17] | (1 << 30); // prende Z
+    if (valorOrigen < 0)
+        Registros[17] = Registros[17] | (1 << 31); // prende N
     GuardarDestino(Registros[2], valorOrigen, MemoriaPrincipal, Registros);
 }
 // despues en add y otras funciones volvemos a usar las auxiliares,
