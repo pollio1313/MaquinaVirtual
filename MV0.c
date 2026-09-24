@@ -199,16 +199,27 @@ void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t Largo
         printf("\n");
         MostrarBinario(operacion);
         printf("\n"); */
+        char buffer[100]="";
+        int pos=0;
+        pos+=snprintf(buffer+pos,sizeof(buffer)-pos,"[%04X] %2X ",j,(operacion & 0xFF)); //esta linea sumas al buffer la celda de mem y el binario de la operacion
+        //printf("[%04X] %2X ",j,(operacion)&0xFF);
 
-        printf("\n %s   ", tablaInstrucciones[codOperacion].nombre);
         if (cant == 01)
         {
+
             OperandoA = operacion >> 6 & 0x03;
+            
             for (int q = 0; q < OperandoA; q++)
             { // while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
                 j++;
                 valorOPA[q] = MemoriaPrincipal[j];
-                printf("%02X", valorOPA[q]);
+                pos+=snprintf(buffer+pos,sizeof(buffer)-pos,"%X",valorOPA[q]);
+                //printf("%X", valorOPA[q]);
+            }
+            printf("%-30s",buffer);
+            printf("| %s   ", tablaInstrucciones[codOperacion].nombre);
+            for (int q=0;q<OperandoA;q++){
+                printf("%X", valorOPA[q]);
             }
         }
         else if (cant == 02)
@@ -218,13 +229,21 @@ void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t Largo
             {
                 j++; // parece qprimero viene el byte mas signfiquitaivo
                 valorOPB[q] = MemoriaPrincipal[j];
+                //printf("%02X ", valorOPB[q]);
+                pos+=snprintf(buffer+pos,sizeof(buffer)-pos,"%02X ",valorOPB[q]);
             }
             OperandoA = (operacion >> 4) & 0x03;
             for (int q = 0; q < OperandoA; q++)
             {
                 j++;
                 valorOPA[q] = MemoriaPrincipal[j];
+                //printf("%02X ", valorOPA[q]);
+                pos+=snprintf(buffer+pos,sizeof(buffer)-pos,"%02X ",valorOPA[q]);
             }
+
+
+            printf("%-30s",buffer);
+            printf("| %s   ", tablaInstrucciones[codOperacion].nombre);
             if (OperandoA == 01)
             {
                 printf("%s", tablaRegistros[valorOPA[0]]);
@@ -233,7 +252,7 @@ void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t Largo
             {
                 for (int q = 0; q < OperandoA; q++)
                 {
-                    printf("%02X", valorOPA[q]);
+                    printf("%2X", valorOPA[q]);
                 }
             }
             printf(",");
@@ -245,7 +264,7 @@ void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t Largo
             {
                 for (int q = 0; q < OperandoB; q++)
                 {
-                    printf("%02X", valorOPB[q]);
+                    printf("%2X", valorOPB[q]);
                 }
             }
         }
@@ -254,8 +273,8 @@ void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t Largo
             OperandoA = OperandoB = 0;
         }
         j++;
-
-        printf("\nj:%d", j);
+        printf("\n");
+        
     }
 }
 // dos funciones auxiliares
