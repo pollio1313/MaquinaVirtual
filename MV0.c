@@ -162,7 +162,7 @@ void Lectura( char MemoriaPrincipal[16384], const char *filename, char *cabecera
         fread(largo, sizeof(char), 2, archivoVMX);
 
         *LargoCod = (largo[0] << 8) | largo[1]; // habia un problema con la lectura y ahroa lee los dos bytes y aca los une
-        printf("  Largo:%d",LargoCod);
+        
         if ((strncmp(cabecera, "VMX26", 5) == 0) && (cabecera[5] == 1))
         {                                                                     // solo corroboro al version
             fread(&MemoriaPrincipal[0], sizeof(char), *LargoCod, archivoVMX); // cargo en memoria solo el codigo en adelante
@@ -314,8 +314,33 @@ void op_MOV( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]
     int valorOrigen = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
     GuardarDestino(Registros[2], valorOrigen, MemoriaPrincipal, Registros);
 }
-// despues en add y otras funciones volvemos a usar las auxiliares
-
+// despues en add y otras funciones volvemos a usar las auxiliares, 
+//creo aca las funciones pero vacias, para q compile(pollio)
+void op_ADD( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_AND( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_CMP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_DIV( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_JC( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_JMP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_JN( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_JNP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_JNN( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_JNZ( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_JP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_JV( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_JZ( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_LDH( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_LDL( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_MUL( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_NOT( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_OR( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_RND( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_SAR( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_SHL( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_SHR( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_SUB( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_SWAP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
+void op_XOR( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
 
 void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Registros[])
 {
