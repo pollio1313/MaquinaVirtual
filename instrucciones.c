@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include <instrucciones.h>
 #include <limits.h>
 
@@ -136,6 +137,11 @@ void op_DIV(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
             Registros[17] = Registros[17] | (1 << 29); // Prende C
         }
         GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);
+    }
+    else
+    {
+        printf("\n[ERROR] Division por cero\n");
+        exit(1);
     }
 }
 

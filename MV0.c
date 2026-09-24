@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdint.h>
 
-#include <instrucciones.h>
+#include "instrucciones.h"
 
 struct operando
 {
@@ -335,6 +335,11 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
             }
         }
 
+        if (codOperacion < 0 || codOperacion > 0x1F || tablaInstrucciones[codOperacion].ejecutar == NULL)
+        {
+            printf("\n[ERROR] Instruccion invalida: 0x%02X en IP [%04X]\n", (unsigned char)codOperacion, pos);
+            exit(1);
+        }
         // ejecucion
         if (tablaInstrucciones[codOperacion].ejecutar != NULL)
         {
@@ -385,7 +390,8 @@ int main(int argc, char *argv[])
 
         if (mostrar_disassembler)
             MostrarCodigo(MemoriaPrincipal, cabecera, LargoCod);
+        EjecutarMaquina(MemoriaPrincipal, TablaSegmentos, Registros);
     }
-    EjecutarMaquina(MemoriaPrincipal, TablaSegmentos, Registros);
+
     return 0;
 }
