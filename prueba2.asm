@@ -1,0 +1,7 @@
+MOV EDX,DS
+SYS 1
+MOV EBX,[EDX]
+ADD EDX,4
+SYS 1
+MOV [ECX],[EDX]
+stop

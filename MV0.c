@@ -201,7 +201,7 @@ void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t Largo
         printf("\n"); */
         char buffer[100]="";
         int pos=0;
-        pos+=snprintf(buffer+pos,sizeof(buffer)-pos,"[%04X] %2X ",j,(operacion & 0xFF)); //esta linea sumas al buffer la celda de mem y el binario de la operacion
+        pos+=snprintf(buffer+pos,sizeof(buffer)-pos,"[%04X] %02X ",j,(operacion & 0xFF)); //esta linea sumas al buffer la celda de mem y el binario de la operacion
         //printf("[%04X] %2X ",j,(operacion)&0xFF);
 
         if (cant == 01)
@@ -248,29 +248,47 @@ void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t Largo
             {
                 printf("%s", tablaRegistros[valorOPA[0]]);
             }
-            else
+            else if (OperandoA == 2)
             {
                 for (int q = 0; q < OperandoA; q++)
                 {
                     printf("%2X", valorOPA[q]);
                 }
             }
+            else{
+                printf("[");
+                for (int q = 0; q < OperandoA; q++)
+                {
+                    printf("%2X", valorOPA[q]);
+                }
+                printf("]");
+            }
             printf(",");
             if (OperandoB == 01)
             {
                 printf("%s", tablaRegistros[valorOPB[0]]);
             }
-            else
+            else if (OperandoB == 2)
             {
+                for (int q = 0; q < OperandoB; q++)
+                {
+                    printf("%X", valorOPB[q]);
+                }
+            }
+            else{
+                printf("[");
                 for (int q = 0; q < OperandoB; q++)
                 {
                     printf("%2X", valorOPB[q]);
                 }
+                printf("]");
             }
         }
         else if (cant == 00)
         { // esta linea esta de mas, porq ya deberian valer 0 de antes
             OperandoA = OperandoB = 0;
+            printf("%-30s",buffer);
+            printf("| %s   ", tablaInstrucciones[codOperacion].nombre);
         }
         j++;
         printf("\n");
