@@ -2,7 +2,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-
 typedef struct
 { // para organizar un segmento necesitamos anotar dos datos: donde empieza y cuanto mide
     int base;
@@ -36,46 +35,55 @@ const struct operandos tablaOperandos[] = {
     {1, "registro", 1},
     {2, "inmediato", 2},
     {3, "memoria", 3}};
+
+typedef void (*InstruccionFunc)(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]); // puntero a funcion
 struct Instruccion
 {
     char *nombre; // esta sirve por ahrao, pero en realidad tendria que ser punteros a funciones con cada metodo
     char codigo;
     int cantOP;
+    InstruccionFunc ejecutar;
 };
 
+// prototipos de las funciones de ejecucion
+void op_STOP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_MOV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_ADD(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+// faltan todas las otras xd
+
 const struct Instruccion tablaInstrucciones[] = {
-    {"SYS", 0x00, 1},
-    {"JMP", 0x01, 1},
-    {"JP", 0x02, 1},
-    {"JN", 0x03, 1},
-    {"JZ", 0x04, 1},
-    {"JC", 0x05, 1},
-    {"JV", 0x06, 1},
-    {"JNP", 0x07, 1},
-    {"JNN", 0x08, 1},
-    {"JNZ", 0x09, 1},
-    {"NOT", 0x0A, 1},
-    {"---", 0x0B, 0},
-    {"---", 0x0C, 0},
-    {"---", 0x0D, 0},
-    {"---", 0x0E, 0},
-    {"STOP", 0x0F, 0},
-    {"MOV", 0x10, 2},
-    {"ADD", 0x11, 2},
-    {"SUB", 0x12, 2},
-    {"MUL", 0x13, 2},
-    {"DIV", 0x14, 2},
-    {"CMP", 0x15, 2},
-    {"AND", 0x16, 2},
-    {"OR", 0x17, 2},
-    {"XOR", 0x18, 2},
-    {"SWAP", 0x19, 2},
-    {"SHL", 0x1A, 2},
-    {"SHR", 0x1B, 2},
-    {"SAR", 0x1C, 2},
-    {"LDL", 0x1D, 2},
-    {"LDH", 0x1E, 2},
-    {"RND", 0x1F, 2}};
+    {"SYS", 0x00, 1, NULL},
+    {"JMP", 0x01, 1, op_JMP},
+    {"JP", 0x02, 1, op_JP},
+    {"JN", 0x03, 1, op_JN},
+    {"JZ", 0x04, 1, op_JZ},
+    {"JC", 0x05, 1, op_JC},
+    {"JV", 0x06, 1, op_JV},
+    {"JNP", 0x07, 1, op_JNP},
+    {"JNN", 0x08, 1, op_JNN},
+    {"JNZ", 0x09, 1, op_JNZ},
+    {"NOT", 0x0A, 1, op_NOT},
+    {"---", 0x0B, 0, NULL},
+    {"---", 0x0C, 0, NULL},
+    {"---", 0x0D, 0, NULL},
+    {"---", 0x0E, 0, NULL},
+    {"STOP", 0x0F, 0, op_STOP},
+    {"MOV", 0x10, 2, op_MOV},
+    {"ADD", 0x11, 2, op_ADD},
+    {"SUB", 0x12, 2, op_SUB},
+    {"MUL", 0x13, 2, op_MUL},
+    {"DIV", 0x14, 2, op_DIV},
+    {"CMP", 0x15, 2, op_CMP},
+    {"AND", 0x16, 2, op_AND},
+    {"OR", 0x17, 2, op_OR},
+    {"XOR", 0x18, 2, op_XOR},
+    {"SWAP", 0x19, 2, op_SWAP},
+    {"SHL", 0x1A, 2, op_SHL},
+    {"SHR", 0x1B, 2, op_SHR},
+    {"SAR", 0x1C, 2, op_SAR},
+    {"LDL", 0x1D, 2, op_LDL},
+    {"LDH", 0x1E, 2, op_LDH},
+    {"RND", 0x1F, 2, op_RND}};
 
 const char *tablaRegistros[32] = {
     // la tabla de registros, solamente devuelve el nombre, es apra la muestra, quizas habria q pasarla a estructura, para poner punteros a func
@@ -237,6 +245,52 @@ void AsignarSegmentos(int LargoCod, Segmento TablaSegmentos[], int Registros[])
     Registros[26] = 0; // CS apuntan a la posicion 0
     Registros[27] = 1; // DS apunta a la posicion 1
 }
+// todas las operaciones desarrolladas
+void op_STOP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    Registros[0] = -1;
+}
+void op_MOV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorOrigen = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
+    GuardarDestino(Registros[2], valorOrigen, MemoriaPrincipal, Registros);
+}
+// despues en add y otras funciones volvemos a usar las auxiliares
+
+// dos funciones auxiliares
+int ObtenerValorOperando(int operando, unsigned char MemoriaPrincipal[], int Registros[]) // extrae el valor real del op
+{
+    int tipo = (operando >> 24) & 0xFF; // tipo 1,2 y 3
+    int valor = operando & 0x00FFFFFF;  // valor crudo
+
+    if (tipo == 1)               // registro
+        return Registros[valor]; // lo que contiene el registro de indice valor
+    else if (tipo == 2)          // inmediato
+        return valor;
+    else if (tipo == 3) // en memoria
+        return (MemoriaPrincipal[valor] << 24) |
+               (MemoriaPrincipal[valor + 1] << 16) |
+               (MemoriaPrincipal[valor + 2] << 8) |
+               MemoriaPrincipal[valor + 3];
+    return 0; // error o defecto, habria que ver despues como tratamos con los errores
+              // porque seguro los codigos que nos van a dar a probar van a tener errores aproposito
+}
+// guarda el resultado en el destino (OP1)
+void GuardarDestino(int operandoDestino, int resultado, unsigned char MemoriaPrincipal[], int Registros[])
+{
+    int tipo = (operandoDestino >> 24) & 0xFF; // tipo 1 o 3
+    int valor = operandoDestino & 0x00FFFFFF;  // la ubicacion fisica
+
+    if (tipo == 1)                    // registro
+        Registros[valor] = resultado; // pisamos el resultado en el indice valor
+    else if (tipo == 3)               // memoria
+    {
+        MemoriaPrincipal[valor] = (resultado >> 24) & 0xFF;
+        MemoriaPrincipal[valor + 1] = (resultado >> 16) & 0xFF;
+        MemoriaPrincipal[valor + 2] = (resultado >> 8) & 0xFF;
+        MemoriaPrincipal[valor + 3] = resultado & 0xFF;
+    }
+}
 
 void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[], int Registros[])
 {
@@ -315,14 +369,11 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
         }
 
         // ejecucion
-        switch (codOperacion)
+        if (tablaInstrucciones[codOperacion].ejecutar != NULL)
         {
-        case 0x10: // Mov
-
-        case 0x0F:             // Stop
-            Registros[0] = -1; // pone el pos/IP en -1 y corta el while
-            break;
+            tablaInstrucciones[codOperacion].ejecutar(MemoriaPrincipal, Registros, TablaSegmentos);
         }
+        // avanzamos el ip si no fue STOP
         if (codOperacion != 0x0F)
             Registros[0] = pos + 1;
     }
