@@ -49,7 +49,32 @@ struct Instruccion
 void op_STOP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_MOV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_ADD(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-// faltan todas las otras xd
+// faltan todas las otras xd, las voy a poenr asi compila el programa, pero sean libres de borrarlas(pollio)
+void op_JMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JN(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JC(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JNP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JNN(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JNZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_NOT(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_SUB(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_MUL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_DIV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_CMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_AND(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_OR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_XOR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_SWAP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_SHL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_SHR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_SAR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_LDL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_LDH(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_RND(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+
 
 const struct Instruccion tablaInstrucciones[] = {
     {"SYS", 0x00, 1, NULL},
@@ -137,10 +162,11 @@ void Lectura(unsigned char MemoriaPrincipal[16384], const char *filename, char *
         fread(largo, sizeof(char), 2, archivoVMX);
 
         *LargoCod = (largo[0] << 8) | largo[1]; // habia un problema con la lectura y ahroa lee los dos bytes y aca los une
-
+        printf("cabecera:%s",cabecera,"  Largo:%d",LargoCod);
         if ((strncmp(cabecera, "VMX26", 5) == 0) && (cabecera[5] == 1))
         {                                                                     // solo corroboro al version
             fread(&MemoriaPrincipal[0], sizeof(char), *LargoCod, archivoVMX); // cargo en memoria solo el codigo en adelante
+            
         }
         else
         {
@@ -383,7 +409,7 @@ int main(int argc, char *argv[])
 {
 
     int Registros[32] = {0};               // Int ya ocupa 4bytes
-    unsigned char MemoriaPrincipal[16384]; // La ram es unidimensional un byte tras otro
+    char MemoriaPrincipal[16384]; // La ram es unidimensional un byte tras otro
     Segmento TablaSegmentos[8];            // 0 cs, 1 ds,
     uint16_t LargoCod;
     char cabecera[6];
