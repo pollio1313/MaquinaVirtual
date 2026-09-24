@@ -2,7 +2,7 @@
 #include <limits.h>
 
 // dos funciones auxiliares
-int ObtenerValorOperando(int operando, unsigned char MemoriaPrincipal[], int Registros[]) // extrae el valor real del op
+int ObtenerValorOperando(int operando, char MemoriaPrincipal[], int Registros[]) // extrae el valor real del op
 {
     int tipo = (operando >> 24) & 0xFF; // tipo 1,2 y 3
     int valor = operando & 0x00FFFFFF;  // valor crudo
@@ -25,7 +25,7 @@ int ObtenerValorOperando(int operando, unsigned char MemoriaPrincipal[], int Reg
               // porque seguro los codigos que nos van a dar a probar van a tener errores aproposito
 }
 // guarda el resultado en el destino (OP1)
-void GuardarDestino(int operandoDestino, int resultado, unsigned char MemoriaPrincipal[], int Registros[])
+void GuardarDestino(int operandoDestino, int resultado, char MemoriaPrincipal[], int Registros[])
 {
     int tipo = (operandoDestino >> 24) & 0xFF; // tipo 1 o 3
     int valor = operandoDestino & 0x00FFFFFF;  // la ubicacion fisica
@@ -44,11 +44,11 @@ void GuardarDestino(int operandoDestino, int resultado, unsigned char MemoriaPri
 }
 
 // todas las operaciones desarrolladas
-void op_STOP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void op_STOP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     Registros[0] = -1;
 }
-void op_MOV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void op_MOV(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorOrigen = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
     Registros[17] = 0;
@@ -56,7 +56,7 @@ void op_MOV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
 }
 // despues en add y otras funciones volvemos a usar las auxiliares,
 // creo aca las funciones pero vacias, para q compile(pollio)
-void op_ADD(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void op_ADD(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
@@ -75,7 +75,7 @@ void op_ADD(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
     GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);                            // guardamos en op1
 }
 
-void op_SUB(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void op_SUB(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
@@ -93,7 +93,7 @@ void op_SUB(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
     GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);
 }
 
-void op_MUL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void op_MUL(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
@@ -113,7 +113,7 @@ void op_MUL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
     GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);
 }
 
-void op_DIV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void op_DIV(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
@@ -135,7 +135,7 @@ void op_DIV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
     }
 }
 
-void op_AND(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void op_AND(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
@@ -151,7 +151,7 @@ void op_AND(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
     GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);
 }
 
-void op_OR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void op_OR(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
@@ -166,7 +166,7 @@ void op_OR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegm
 
     GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);
 }
-void op_XOR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void op_XOR(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
@@ -182,7 +182,7 @@ void op_XOR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
     GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);
 }
 
-void op_SHL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void op_SHL(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
@@ -207,7 +207,7 @@ void op_SHL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
         GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);
     }
 }
-void op_SHR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void op_SHR(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
@@ -215,7 +215,13 @@ void op_SHR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
 
     if (valorB >= 0 && valorB <= 31)
     {
-        int resultado = valorA >> valorB;
+        if (valorB > 0)
+        {
+            int bitCaido = ((unsigned int)valorA >> (valorB - 1)) & 1;
+            if (bitCaido)                                  // acarreo
+                Registros[17] = Registros[17] | (1 << 29); // prende C
+        }
+        int resultado = (unsigned int)valorA >> valorB;
         if (resultado == 0)
             Registros[17] = Registros[17] | (1 << 30); // prende Z
         if (resultado < 0)
@@ -224,25 +230,141 @@ void op_SHR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
         GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);
     }
 }
-void op_SAR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void op_SAR(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
     Registros[17] = 0; // iniciamos CC
+    if (valorB > 0 && valorB < 32)
+    {
+        if (valorB > 0)
+        {
+            int bitCaido = ((unsigned int)valorA >> (valorB - 1)) & 1;
+            if (bitCaido)                                  // acarreo
+                Registros[17] = Registros[17] | (1 << 29); // prende C
+        }
+        int resultado = valorA >> valorB;
+        if (resultado == 0)
+            Registros[17] = Registros[17] | (1 << 30); // prende Z
+        if (resultado < 0)
+            Registros[17] = Registros[17] | (1 << 31); // prende N
+        GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);
+    }
 }
 
-void op_CMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_JC(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_JMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_JN(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_JNP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_JNN(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_JNZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_JP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_JV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_JZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_LDH(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_LDL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_NOT(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_RND(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
-void op_SWAP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
+void op_CMP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
+    int resultado = valorA - valorB;
+    Registros[17] = 0; // iniciamos CC
+    if (resultado == 0)
+        Registros[17] = Registros[17] | (1 << 30); // prende Z
+    if (resultado < 0)
+        Registros[17] = Registros[17] | (1 << 31);                                                   // prende N
+    if ((valorA > 0 && valorB < 0 && resultado < 0) || (valorA < 0 && valorB > 0 && resultado >= 0)) // casos de desbordamiento
+        Registros[17] = Registros[17] | (1 << 28);                                                   // Prende V
+    if ((unsigned int)valorA < (unsigned int)valorB)
+        Registros[17] = Registros[17] | (1 << 29); // Prende C
+}
+
+void op_JC(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    if ((Registros[17] >> 29) & 1) // esta prendido C?
+        Registros[0] = valorA;     // IP a valorA
+}
+void op_JMP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    Registros[0] = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+}
+void op_JN(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    if ((Registros[17] >> 31) & 1) // esta prendido N?
+        Registros[0] = valorA;
+}
+void op_JNP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    if (((Registros[17] >> 31) & 1) || ((Registros[17] >> 30) & 1)) // esta prendido N y Z?
+        Registros[0] = valorA;
+}
+void op_JNN(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    if (!((Registros[17] >> 31) & 1))
+        Registros[0] = valorA;
+}
+void op_JNZ(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    if (!((Registros[17] >> 30) & 1))
+        Registros[0] = valorA;
+}
+void op_JP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    if (!((Registros[17] >> 31) & 1) && !((Registros[17] >> 30) & 1))
+        Registros[0] = valorA;
+}
+void op_JV(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    if ((Registros[17] >> 28) & 1)
+        Registros[0] = valorA;
+}
+void op_JZ(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    if ((Registros[17] >> 30) & 1)
+        Registros[0] = valorA;
+}
+
+void op_LDH(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    int destino = Registros[2];
+
+    Registros[destino] = (Registros[destino] & 0xFFFF) | ((valorA & 0XFFFF) << 16);
+}
+void op_LDL(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    int registroDestino = Registros[2];
+
+    Registros[registroDestino] = (Registros[registroDestino] & 0xFFFF0000) | (valorA & 0xFFFF);
+}
+void op_NOT(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    int resultado = ~valorA; // inverso bit a bit
+
+    Registros[17] = 0; // iniciamos CC
+    if (resultado == 0)
+        Registros[17] = Registros[17] | (1 << 30); // prende Z
+    if (resultado < 0)
+        Registros[17] = Registros[17] | (1 << 31); // prende N
+
+    GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);
+}
+void op_RND(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int resultado = rand(); // numero aleatorio
+
+    Registros[17] = 0; // iniciamos CC
+    if (resultado == 0)
+        Registros[17] = Registros[17] | (1 << 30); // prende Z
+    if (resultado < 0)
+        Registros[17] = Registros[17] | (1 << 31); // prende N
+
+    GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);
+}
+void op_SWAP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
+    int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
+
+    GuardarDestino(Registros[2], valorB, MemoriaPrincipal, Registros);
+    GuardarDestino(Registros[3], valorA, MemoriaPrincipal, Registros);
+}

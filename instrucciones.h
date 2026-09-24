@@ -6,36 +6,36 @@ typedef struct
     int size;
 } Segmento;
 
-typedef void (*InstruccionFunc)(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]); // puntero a funcion
+typedef void (*InstruccionFunc)(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]); // puntero a funcion
 
 // auxiliares
-int ObtenerValorOperando(int operando, unsigned char MemoriaPrincipal[], int Registros[]);
-void GuardarDestino(int operandoDestino, int resultado, unsigned char MemoriaPrincipal[], int Registros[]);
+int ObtenerValorOperando(int operando, char MemoriaPrincipal[], int Registros[]);
+void GuardarDestino(int operandoDestino, int resultado, char MemoriaPrincipal[], int Registros[]);
 // prototipos de las funciones de ejecucion
-void op_STOP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_MOV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_ADD(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JN(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JC(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JNP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JNN(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JNZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_NOT(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_SUB(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_MUL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_DIV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_CMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_AND(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_OR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_XOR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_SWAP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_SHL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_SHR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_SAR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_LDL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_LDH(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_RND(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_STOP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_MOV(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_ADD(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JMP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JN(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JZ(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JC(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JV(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JNP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JNN(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_JNZ(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_NOT(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_SUB(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_MUL(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_DIV(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_CMP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_AND(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_OR(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_XOR(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_SWAP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_SHL(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_SHR(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_SAR(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_LDL(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_LDH(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_RND(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
