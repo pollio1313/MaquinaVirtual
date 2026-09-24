@@ -2,26 +2,8 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-typedef struct
-{ // para organizar un segmento necesitamos anotar dos datos: donde empieza y cuanto mide
-    int base;
-    int size;
-} Segmento;
 
-// esta funcion necesita que le llegue
-void MOV(char MemoriaPrincipal[], char Registros[][4], char OPA, char OPB, char tipoOPB)
-{
-    char plato;
-
-    if (tipoOPB == 1)
-    {
-        Registros[OPB][3] = OPA; // habria q revisar cuantos bytes ocupa el OPA
-    }
-    else if (tipoOPB == 3)
-    {
-        MemoriaPrincipal[OPB] = OPA;
-    }
-}
+#include <instrucciones.h>
 
 struct operando
 {
@@ -36,7 +18,6 @@ const struct operando tablaOperandos[] = {
     {2, "inmediato", 2},
     {3, "memoria", 3}};
 
-typedef void (*InstruccionFunc)( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]); // puntero a funcion
 struct Instruccion
 {
     char *nombre; // esta sirve por ahrao, pero en realidad tendria que ser punteros a funciones con cada metodo
@@ -44,37 +25,6 @@ struct Instruccion
     int cantOP;
     InstruccionFunc ejecutar;
 };
-
-// prototipos de las funciones de ejecucion
-void op_STOP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_MOV( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_ADD( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-// faltan todas las otras xd, las voy a poenr asi compila el programa, pero sean libres de borrarlas(pollio)
-void op_JMP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JN( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JZ( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JC( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JV( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JNP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JNN( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_JNZ( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_NOT( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_SUB( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_MUL( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_DIV( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_CMP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_AND( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_OR( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_XOR( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_SWAP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_SHL( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_SHR( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_SAR( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_LDL( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_LDH( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void op_RND( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-
 
 const struct Instruccion tablaInstrucciones[] = {
     {"SYS", 0x00, 1, NULL},
@@ -146,7 +96,7 @@ const char *tablaRegistros[32] = {
     "Programa"   // 31
 };
 
-void Lectura( char MemoriaPrincipal[16384], const char *filename, char *cabecera, uint16_t *LargoCod)
+void Lectura(char MemoriaPrincipal[16384], const char *filename, char *cabecera, uint16_t *LargoCod)
 {
     FILE *archivoVMX;
     int i = 0, j = 0, valor;
@@ -162,11 +112,10 @@ void Lectura( char MemoriaPrincipal[16384], const char *filename, char *cabecera
         fread(largo, sizeof(char), 2, archivoVMX);
 
         *LargoCod = (largo[0] << 8) | largo[1]; // habia un problema con la lectura y ahroa lee los dos bytes y aca los une
-        
+
         if ((strncmp(cabecera, "VMX26", 5) == 0) && (cabecera[5] == 1))
         {                                                                     // solo corroboro al version
             fread(&MemoriaPrincipal[0], sizeof(char), *LargoCod, archivoVMX); // cargo en memoria solo el codigo en adelante
-            
         }
         else
         {
@@ -184,7 +133,7 @@ void MostrarBinario(char byte)
     }
 }
 
-void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoCod) // ya que tenemos LargoCod no es necesario volver a calcularlo
+void MostrarCodigo(char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoCod) // ya que tenemos LargoCod no es necesario volver a calcularlo
 {
     int i = 0, j = 0, cant;
     char codOperacion, OperandoA, OperandoB, valorOPA[3] = {0}, valorOPB[3] = {0};
@@ -199,26 +148,27 @@ void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t Largo
         printf("\n");
         MostrarBinario(operacion);
         printf("\n"); */
-        char buffer[100]="";
-        int pos=0;
-        pos+=snprintf(buffer+pos,sizeof(buffer)-pos,"[%04X] %02X ",j,(operacion & 0xFF)); //esta linea sumas al buffer la celda de mem y el binario de la operacion
-        //printf("[%04X] %2X ",j,(operacion)&0xFF);
+        char buffer[100] = "";
+        int pos = 0;
+        pos += snprintf(buffer + pos, sizeof(buffer) - pos, "[%04X] %02X ", j, (operacion & 0xFF)); // esta linea sumas al buffer la celda de mem y el binario de la operacion
+        // printf("[%04X] %2X ",j,(operacion)&0xFF);
 
         if (cant == 01)
         {
 
             OperandoA = operacion >> 6 & 0x03;
-            
+
             for (int q = 0; q < OperandoA; q++)
             { // while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
                 j++;
                 valorOPA[q] = MemoriaPrincipal[j];
-                pos+=snprintf(buffer+pos,sizeof(buffer)-pos,"%X",valorOPA[q]);
-                //printf("%X", valorOPA[q]);
+                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%X", valorOPA[q]);
+                // printf("%X", valorOPA[q]);
             }
-            printf("%-30s",buffer);
+            printf("%-30s", buffer);
             printf("| %s   ", tablaInstrucciones[codOperacion].nombre);
-            for (int q=0;q<OperandoA;q++){
+            for (int q = 0; q < OperandoA; q++)
+            {
                 printf("%X", valorOPA[q]);
             }
         }
@@ -229,20 +179,19 @@ void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t Largo
             {
                 j++; // parece qprimero viene el byte mas signfiquitaivo
                 valorOPB[q] = MemoriaPrincipal[j];
-                //printf("%02X ", valorOPB[q]);
-                pos+=snprintf(buffer+pos,sizeof(buffer)-pos,"%02X ",valorOPB[q]);
+                // printf("%02X ", valorOPB[q]);
+                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%02X ", valorOPB[q]);
             }
             OperandoA = (operacion >> 4) & 0x03;
             for (int q = 0; q < OperandoA; q++)
             {
                 j++;
                 valorOPA[q] = MemoriaPrincipal[j];
-                //printf("%02X ", valorOPA[q]);
-                pos+=snprintf(buffer+pos,sizeof(buffer)-pos,"%02X ",valorOPA[q]);
+                // printf("%02X ", valorOPA[q]);
+                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%02X ", valorOPA[q]);
             }
 
-
-            printf("%-30s",buffer);
+            printf("%-30s", buffer);
             printf("| %s   ", tablaInstrucciones[codOperacion].nombre);
             if (OperandoA == 01)
             {
@@ -255,7 +204,8 @@ void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t Largo
                     printf("%2X", valorOPA[q]);
                 }
             }
-            else{
+            else
+            {
                 printf("[");
                 for (int q = 0; q < OperandoA; q++)
                 {
@@ -275,7 +225,8 @@ void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t Largo
                     printf("%X", valorOPB[q]);
                 }
             }
-            else{
+            else
+            {
                 printf("[");
                 for (int q = 0; q < OperandoB; q++)
                 {
@@ -287,48 +238,14 @@ void MostrarCodigo( char MemoriaPrincipal[16384], char *cabecera, uint16_t Largo
         else if (cant == 00)
         { // esta linea esta de mas, porq ya deberian valer 0 de antes
             OperandoA = OperandoB = 0;
-            printf("%-30s",buffer);
+            printf("%-30s", buffer);
             printf("| %s   ", tablaInstrucciones[codOperacion].nombre);
         }
         j++;
         printf("\n");
-        
     }
 }
-// dos funciones auxiliares
-int ObtenerValorOperando(int operando,char MemoriaPrincipal[], int Registros[]) // extrae el valor real del op
-{
-    int tipo = (operando >> 24) & 0xFF; // tipo 1,2 y 3
-    int valor = operando & 0x00FFFFFF;  // valor crudo
 
-    if (tipo == 1)               // registro
-        return Registros[valor]; // lo que contiene el registro de indice valor
-    else if (tipo == 2)          // inmediato
-        return valor;
-    else if (tipo == 3) // en memoria
-        return (MemoriaPrincipal[valor] << 24) |
-               (MemoriaPrincipal[valor + 1] << 16) |
-               (MemoriaPrincipal[valor + 2] << 8) |
-               MemoriaPrincipal[valor + 3];
-    return 0; // error o defecto, habria que ver despues como tratamos con los errores
-              // porque seguro los codigos que nos van a dar a probar van a tener errores aproposito
-}
-// guarda el resultado en el destino (OP1)
-void GuardarDestino(int operandoDestino, int resultado,char MemoriaPrincipal[], int Registros[])
-{
-    int tipo = (operandoDestino >> 24) & 0xFF; // tipo 1 o 3
-    int valor = operandoDestino & 0x00FFFFFF;  // la ubicacion fisica
-
-    if (tipo == 1)                    // registro
-        Registros[valor] = resultado; // pisamos el resultado en el indice valor
-    else if (tipo == 3)               // memoria
-    {
-        MemoriaPrincipal[valor] = (resultado >> 24) & 0xFF;
-        MemoriaPrincipal[valor + 1] = (resultado >> 16) & 0xFF;
-        MemoriaPrincipal[valor + 2] = (resultado >> 8) & 0xFF;
-        MemoriaPrincipal[valor + 3] = resultado & 0xFF;
-    }
-}
 void AsignarSegmentos(int LargoCod, Segmento TablaSegmentos[], int Registros[])
 {
 
@@ -341,43 +258,6 @@ void AsignarSegmentos(int LargoCod, Segmento TablaSegmentos[], int Registros[])
     Registros[26] = 0; // CS apuntan a la posicion 0
     Registros[27] = 1; // DS apunta a la posicion 1
 }
-// todas las operaciones desarrolladas
-void op_STOP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
-{
-    Registros[0] = -1;
-}
-void op_MOV( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
-{
-    int valorOrigen = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
-    GuardarDestino(Registros[2], valorOrigen, MemoriaPrincipal, Registros);
-}
-// despues en add y otras funciones volvemos a usar las auxiliares, 
-//creo aca las funciones pero vacias, para q compile(pollio)
-void op_ADD( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_AND( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_CMP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_DIV( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_JC( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_JMP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_JN( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_JNP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_JNN( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_JNZ( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_JP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_JV( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_JZ( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_LDH( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_LDL( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_MUL( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_NOT( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_OR( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_RND( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_SAR( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_SHL( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_SHR( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_SUB( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_SWAP( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
-void op_XOR( char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){}
 
 void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Registros[])
 {
@@ -469,9 +349,9 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
 int main(int argc, char *argv[])
 {
 
-    int Registros[32] = {0};               // Int ya ocupa 4bytes
+    int Registros[32] = {0};      // Int ya ocupa 4bytes
     char MemoriaPrincipal[16384]; // La ram es unidimensional un byte tras otro
-    Segmento TablaSegmentos[8];            // 0 cs, 1 ds,
+    Segmento TablaSegmentos[8];   // 0 cs, 1 ds,
     uint16_t LargoCod;
     char cabecera[6];
 
@@ -498,7 +378,7 @@ int main(int argc, char *argv[])
         printf("Archivo a ejecutar: %s\n", filename);
         printf("Modo disassembler: %s\n", mostrar_disassembler ? "SI" : "NO");
 
-        // Ac� seguir�a: abrir el archivo, leer la cabecera, cargar en memoria,
+        // Aca seguiria: abrir el archivo, leer la cabecera, cargar en memoria,
         // ejecutar (y si mostrar_disassembler, imprimir el disassembler)
         Lectura(MemoriaPrincipal, filename, cabecera, &LargoCod);
         AsignarSegmentos(LargoCod, TablaSegmentos, Registros);

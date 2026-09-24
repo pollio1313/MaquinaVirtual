@@ -3,5 +3,5 @@ SYS 1
 MOV EBX,[EDX]
 ADD EDX,4
 SYS 1
-MOV [ECX],[EDX]
+MOV [ECX],[7]
 stop

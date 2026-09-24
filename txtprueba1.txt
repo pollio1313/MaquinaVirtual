@@ -6,3 +6,13 @@ E:\Facultad\arqui\MV>vmt prueba1.asm [prueba1.vmx]
 [000F] 80 00 01             |                   SYS          1
 [0012] 91 00 04 0D          |                   ADD        EDX,          4
 [0016] 0F                   |                  stop
+
+
+PS C:\Users\junio\OneDrive\Desktop\Facultad\2026\2do cuatri\FAC\MaquinaVirtual> ./vmt.exe prueba2.asm prueba2.vmx 
+[0000] 50 1B 0D             |                   MOV        EDX,         DS      
+[0003] 80 00 01             |                   SYS          1      
+[0006] D0 00 00 8D 0B       |                   MOV        EBX,      [EDX]      
+[000B] 91 00 04 0D          |                   ADD        EDX,          4      
+[000F] 80 00 01             |                   SYS          1      
+[0012] F0 00 07 9B 00 00 8C |                   MOV      [ECX],        [7]      
+[0019] 0F                   |                  stop      
