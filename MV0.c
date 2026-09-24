@@ -96,7 +96,7 @@ const char *tablaRegistros[32] = {
     "Programa"   // 31
 };
 
-void Lectura(unsigned char MemoriaPrincipal[16384], const char *filename, char *cabecera, uint16_t *LargoCod)
+void Lectura(char MemoriaPrincipal[16384], const char *filename, char *cabecera, uint16_t *LargoCod)
 {
     FILE *archivoVMX;
     int i = 0, j = 0, valor;
@@ -133,7 +133,7 @@ void MostrarBinario(char byte)
     }
 }
 
-void MostrarCodigo(unsigned char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoCod) // ya que tenemos LargoCod no es necesario volver a calcularlo
+void MostrarCodigo(char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoCod) // ya que tenemos LargoCod no es necesario volver a calcularlo
 {
     int i = 0, j = 0, cant;
     char codOperacion, OperandoA, OperandoB, valorOPA[3] = {0}, valorOPB[3] = {0};
@@ -259,7 +259,7 @@ void AsignarSegmentos(int LargoCod, Segmento TablaSegmentos[], int Registros[])
     Registros[27] = 1; // DS apunta a la posicion 1
 }
 
-void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[], int Registros[])
+void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Registros[])
 {
     char codOperacion, operandoA, operandoB;
     int pos, cantOP;
@@ -349,9 +349,9 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
 int main(int argc, char *argv[])
 {
 
-    int Registros[32] = {0};               // Int ya ocupa 4bytes
-    unsigned char MemoriaPrincipal[16384]; // La ram es unidimensional un byte tras otro
-    Segmento TablaSegmentos[8];            // 0 cs, 1 ds,
+    int Registros[32] = {0};      // Int ya ocupa 4bytes
+    char MemoriaPrincipal[16384]; // La ram es unidimensional un byte tras otro
+    Segmento TablaSegmentos[8];   // 0 cs, 1 ds,
     uint16_t LargoCod;
     char cabecera[6];
 
