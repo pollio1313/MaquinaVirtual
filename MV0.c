@@ -273,8 +273,8 @@ void AsignarSegmentos(int LargoCod, Segmento TablaSegmentos[], int Registros[])
     TablaSegmentos[1].base = LargoCod;
     TablaSegmentos[1].size = 16384 - LargoCod;
 
-    Registros[26] = 0; // CS apuntan a la posicion 0
-    Registros[27] = 1; // DS apunta a la posicion 1
+    Registros[26] = 0 << 16; // CS seg 0 offset 0
+    Registros[27] = 1 << 16; // DS seg 1 offset 0
 }
 
 void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Registros[])
@@ -359,12 +359,20 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
             exit(1);
         }
         // ejecucion
+        int ipPrevio = Registros[0];
         if (tablaInstrucciones[codOperacion].ejecutar != NULL)
         {
             tablaInstrucciones[codOperacion].ejecutar(MemoriaPrincipal, Registros, TablaSegmentos);
         }
+        else{
+            printf("Error: Codigo de operacion invalido: %02X\n", codOperacion);
+            codOperacion = 0x0F; 
+            Registros[0] = -1;  // forzamos la detencion de la maquina
+        }
         // avanzamos el ip si no fue STOP
         if (codOperacion != 0x0F)
+            break;
+        if (Registros[0] == ipPrevio) // si la instruccion no modifico el ip
             Registros[0] = pos + 1;
     }
 }
@@ -390,7 +398,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        filename = argv[1];
+        char *filename = argv[1];
         int mostrar_disassembler = 0;
 
         if (argc >= 3 && strcmp(argv[2], "-d") == 0)
