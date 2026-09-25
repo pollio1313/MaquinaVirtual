@@ -41,6 +41,10 @@ void GuardarDestino(int operandoDestino, int resultado, unsigned char MemoriaPri
         MemoriaPrincipal[valor + 2] = (resultado >> 8) & 0xFF;
         MemoriaPrincipal[valor + 3] = resultado & 0xFF;
     }
+    else
+    {
+        printf("Error: Operando de destino invalido\n");
+    }
 }
 
 // todas las operaciones desarrolladas
@@ -52,6 +56,11 @@ void op_MOV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
 {
     int valorOrigen = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
     Registros[17] = 0;
+    //  bit 32 N bit 31 Z bit 30 C (acarreo) bit 29 V (desbordamiento) demas 28 bits reservados
+    if (resultado == 0)
+        Registros[17] = Registros[17] | (1 << 30); // prende Z
+    if (resultado < 0)
+        Registros[17] = Registros[17] | (1 << 31);
     GuardarDestino(Registros[2], valorOrigen, MemoriaPrincipal, Registros);
 }
 // despues en add y otras funciones volvemos a usar las auxiliares,
@@ -132,6 +141,10 @@ void op_DIV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
             Registros[17] = Registros[17] | (1 << 29); // Prende C
         }
         GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros);
+    }
+    else{
+        printf("Error: Division por cero\n");
+        Registros[0] = -1; // Forzamos la detencion de la maquina
     }
 }
 
