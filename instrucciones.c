@@ -1,4 +1,4 @@
-#include <instrucciones.h>
+#include "instrucciones.h"
 #include <limits.h>
 
 // dos funciones auxiliares
@@ -55,7 +55,7 @@ void op_MOV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
     GuardarDestino(Registros[2], valorOrigen, MemoriaPrincipal, Registros);
 }
 // despues en add y otras funciones volvemos a usar las auxiliares,
-// creo aca las funciones pero vacias, para q compile(pollio)
+
 void op_ADD(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros);
@@ -230,7 +230,7 @@ void op_SAR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros);
     Registros[17] = 0; // iniciamos CC
 }
-
+// creo aca las funciones pero vacias, para q compile(pollio)
 void op_CMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
 void op_JC(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
 void op_JMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) {}
