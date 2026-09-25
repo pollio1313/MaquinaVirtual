@@ -17,7 +17,7 @@ int CalcularDireccionFisica(int operandoMemoria, char MemoriaPrincipal[], int Re
         printf("\n [ERROR] Segmento invalido %d\n", numSeg);
         exit(1);
     }
-    // validar limite
+    // validar limite que no se pase o se caiga
     if (offsetFinal < 0 || (offsetFinal + 4) > TablaSegmentos[numSeg].size)
     {
         printf("\n[ERROR] Fuera del limite de segmento.\n");
@@ -41,7 +41,7 @@ int ObtenerValorOperando(int operando, char MemoriaPrincipal[], int Registros[],
         return (short)(valor & 0xFFFF); // 16bits
     else if (tipo == 3)                 // en memoria
     {
-        int dirFisica = CalcularDireccionFisica(valor, MemoriaPrincipal, Registros, TablaSegmentos);
+        int dirFisica = CalcularDireccionFisica(valor, MemoriaPrincipal, Registros, TablaSegmentos); // Ya guarda en el MAR
         // reconstruimos directamente en el MBR
         Registros[6] = (MemoriaPrincipal[dirFisica] << 24) |
                        (MemoriaPrincipal[dirFisica + 1] << 16) |
@@ -59,7 +59,7 @@ void GuardarDestino(int operandoDestino, int resultado, char MemoriaPrincipal[],
     int valor = operandoDestino & 0x00FFFFFF;  // la ubicacion fisica
 
     if (tipo == 1)                           // registro
-        Registros[valor & 0x1F] = resultado; // pisamos el resultado en el indice valor
+        Registros[valor & 0x1F] = resultado; // pisamos el resultado en el indice valor, 5 bits
     else if (tipo == 3)                      // memoria
     {
         int dirFisica = CalcularDireccionFisica(valor, MemoriaPrincipal, Registros, TablaSegmentos);
@@ -68,6 +68,10 @@ void GuardarDestino(int operandoDestino, int resultado, char MemoriaPrincipal[],
         MemoriaPrincipal[dirFisica + 1] = (resultado >> 16) & 0xFF;
         MemoriaPrincipal[dirFisica + 2] = (resultado >> 8) & 0xFF;
         MemoriaPrincipal[dirFisica + 3] = resultado & 0xFF;
+    }
+    else
+    {
+        printf("Error: Operando de destino invalido\n");
     }
 }
 

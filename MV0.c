@@ -364,6 +364,11 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
         {
             tablaInstrucciones[codOperacion].ejecutar(MemoriaPrincipal, Registros, TablaSegmentos);
         }
+        else{
+            printf("Error: Codigo de operacion invalido: %02X\n", codOperacion);
+            codOperacion = 0x0F; 
+            Registros[0] = -1;  // forzamos la detencion de la maquina
+        }
         // avanzamos el ip si no fue STOP
         if (codOperacion != 0x0F)
             break;
@@ -393,7 +398,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        filename = argv[1];
+        char *filename = argv[1];
         int mostrar_disassembler = 0;
 
         if (argc >= 3 && strcmp(argv[2], "-d") == 0)
