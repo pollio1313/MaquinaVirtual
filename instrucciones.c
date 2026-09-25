@@ -81,6 +81,7 @@ void op_SYS(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
     valor = ObtenerValorOperando(Registros[2],MemoriaPrincipal,Registros,TablaSegmentos);
     cant = (Registros[12] & 0x0000FFFF);   //2 bytes menos significativos de ECX 
     if (valor == 0x1){
+        scanf("%d",cant);
         while (i < cant)
             GuardarDestino(Registros[13],)
     }
