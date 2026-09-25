@@ -162,14 +162,14 @@ void MostrarCodigo(char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoC
             { // while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
                 j++;
                 valorOPA[q] = MemoriaPrincipal[j];
-                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%X", valorOPA[q]);
+                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%X", valorOPA[q] & 0xFF);
                 // printf("%X", valorOPA[q]);
             }
             printf("%-30s", buffer);
             printf("| %s   ", tablaInstrucciones[codOperacion].nombre);
             for (int q = 0; q < OperandoA; q++)
             {
-                printf("%X", valorOPA[q]);
+                printf("%X", valorOPA[q] & 0xFF);
             }
         }
         else if (cant == 02)
@@ -180,7 +180,7 @@ void MostrarCodigo(char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoC
                 j++; // parece qprimero viene el byte mas signfiquitaivo
                 valorOPB[q] = MemoriaPrincipal[j];
                 // printf("%02X ", valorOPB[q]);
-                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%02X ", valorOPB[q]);
+                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%02X ", valorOPB[q] & 0xFF);
             }
             OperandoA = (operacion >> 4) & 0x03;
             for (int q = 0; q < OperandoA; q++)
@@ -188,7 +188,7 @@ void MostrarCodigo(char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoC
                 j++;
                 valorOPA[q] = MemoriaPrincipal[j];
                 // printf("%02X ", valorOPA[q]);
-                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%02X ", valorOPA[q]);
+                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%02X ", valorOPA[q] & 0xFF);
             }
 
             printf("%-30s", buffer);
@@ -201,17 +201,26 @@ void MostrarCodigo(char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoC
             {
                 for (int q = 0; q < OperandoA; q++)
                 {
-                    printf("%2X", valorOPA[q]);
+                    printf("%2X", valorOPA[q] & 0xFF);
                 }
             }
             else
             {
-                printf("[");
-                for (int q = 0; q < OperandoA; q++)
+                int offset = (valorOPA[0] << 8) | (valorOPA[1]);
+                int registro = valorOPA[2] & 0x1F;
+
+                if (registro == 0)
                 {
-                    printf("%2X", valorOPA[q]);
+                    printf("[%X]", offset);
                 }
-                printf("]");
+                else if (offset == 0)
+                {
+                    printf("[%s]", tablaRegistros[registro]);
+                }
+                else
+                {
+                    printf("[%s+%X]", tablaRegistros[registro], offset);
+                }
             }
             printf(",");
             if (OperandoB == 01)
@@ -222,17 +231,26 @@ void MostrarCodigo(char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoC
             {
                 for (int q = 0; q < OperandoB; q++)
                 {
-                    printf("%X", valorOPB[q]);
+                    printf("%X", valorOPB[q] & 0xFF);
                 }
             }
             else
             {
-                printf("[");
-                for (int q = 0; q < OperandoB; q++)
+                int offset = (valorOPB[0] << 8) | (valorOPB[1]);
+                int registro = valorOPB[2] & 0x1F;
+
+                if (registro == 0)
                 {
-                    printf("%2X", valorOPB[q]);
+                    printf("[%X]", offset);
                 }
-                printf("]");
+                else if (offset == 0)
+                {
+                    printf("[%s]", tablaRegistros[registro]);
+                }
+                else
+                {
+                    printf("[%s+%X]", tablaRegistros[registro], offset);
+                }
             }
         }
         else if (cant == 00)
