@@ -13,6 +13,7 @@ int CalcularDireccionFisica(int operandoMemoria, char MemoriaPrincipal[], int Re
 int ObtenerValorOperando(int operando, char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void GuardarDestino(int operandoDestino, int resultado, char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 // prototipos de las funciones de ejecucion
+void op_SYS(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_STOP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_MOV(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_ADD(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
