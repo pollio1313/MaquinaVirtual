@@ -1,5 +1,5 @@
 #include <stdlib.h>
-#include <instrucciones.h>
+#include "instrucciones.h"
 #include <limits.h>
 
 // tres funciones auxiliares
@@ -75,18 +75,109 @@ void GuardarDestino(int operandoDestino, int resultado, char MemoriaPrincipal[],
     }
 }
 
-// todas las operaciones desarrolladas
-void op_SYS(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]){
-    int cant, i;
-    valor = ObtenerValorOperando(Registros[2],MemoriaPrincipal,Registros,TablaSegmentos);
-    cant = (Registros[12] & 0x0000FFFF);   //2 bytes menos significativos de ECX 
-    if (valor == 0x1){
-        scanf("%d",cant);
-        while (i < cant)
-            GuardarDestino(Registros[13],)
-    }
+void ImprimirBinario(int valor, int tamByte)
+{
+    print("0b");
+    for (int i = (tamByte * 8) - 1; i >= 0; i--)
+        printf("%d", (valor >> i) & 1);
 }
 
+// todas las operaciones desarrolladas
+void op_SYS(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int subcodigo = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
+    int modo = Registros[10];                      // EAX formato
+    int cantCeldas = Registros[12] & 0xFFFF;       // ecx bajo cantidad
+    int tamBytes = (Registros[12] >> 16) & 0xFFFF; // ecx alto tamaño bytes
+    int dirLogica = Registros[13];                 // edx puntero de inicio
+
+    if (tamBytes <= 0)
+        tamBytes = 4; // por defecto 4 bytes
+
+    for (int i = 0; i < cantCeldas; i++)
+    {
+        int numSeg = (dirLogica >> 16) & 0xFFFF;
+        int offset = dirLogica & 0xFFFF;
+
+        // validar segmento
+        if (numSeg < 0 || numSeg >= 8 || TablaSegmentos[numSeg].size == 0xFFFF || (short)TablaSegmentos[numSeg].base == -1)
+        {
+            printf("\n[ERROR] Fallo de segmento en SYS (Segmento invalido %d)\n", numSeg);
+            exit(1);
+        }
+        if (offset < 0 || (offset + tamBytes) > TablaSegmentos[numSeg].size)
+        {
+            printf("\n[ERROR] Fallo de segmento en SYS (Fuera de limite)\n");
+            exit(1);
+        }
+
+        int dirFisica = TablaSegmentos[numSeg].base + offset;
+        Registros[4] = dirLogica;                               // LAR
+        Registros[5] = (tamBytes << 16) | (dirFisica & 0xFFFF); // MAR
+
+        printf("[%04X]: ", dirFisica); //[XXXX]
+        if (subcodigo == 1)            // read
+        {
+            int dato = 0;
+            if (modo & 0x02) // caracter
+            {
+                char c;
+                scanf(" %c", &c);
+                dato = c;
+            }
+            else if (modo & 0x08) // hexa
+                scanf("%x", &dato);
+            else if (modo & 0x04) // octal
+                scanf("%o", &dato);
+            else if (modo & 0x10) // bin
+            {
+                char binStr[35]; // 0b + 32 bits + \0
+                scanf("%s", binStr);
+                int inicio = 0;
+                if (binStr[0] == '0' && (binStr[1] == 'b' || binStr[1] == 'B'))
+                {
+                    inicio = 2;
+                }
+                for (int j = inicio; binStr[j] != '\0'; j++)
+                    if (binStr[j] == '0' || binStr[j] == '1')
+                        dato = (dato << 1) | (binStr[j] - '0'); // convierto en ascii el numero
+            }
+            else // decima por defecto (0x01)
+                scanf("%d", &dato);
+
+            Registros[6] = dato; // MBR
+            for (int j = 0; j < tamBytes; j++)
+                MemoriaPrincipal[dirFisica + j] = (dato >> (8 * (tamBytes - 1 - j))) & 0xFF;
+        }
+        else if (subcodigo == 2) // write
+        {
+            int valor = 0;
+            for (int j = 0; j < tamBytes; j++)
+                valor = (valor << 8) | MemoriaPrincipal[dirFisica + j];
+
+            Registros[6] = valor; // MBR
+            if (modo & 0x10)      // bin
+                ImprimirBinario(valor, tamBytes);
+            else if (modo & 0x08) // hexa
+                printf("0x%X ", valor);
+            else if (modo & 0x04) // octal
+                printf("0o%o ", valor);
+            else if (modo & 0x02) // caract
+            {
+                for (int j = 0; j < tamBytes; j++)
+                {
+                    char c = (valor >> (8 * (tamBytes - 1 - j))) & 0xFF;
+                    print("%c", c);
+                }
+                printf(" ");
+            }
+            else
+                printf("%d", valor);
+            printf("\n");
+        }
+        dirLogica += tamBytes; // siguiente celda
+    }
+}
 void op_STOP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     Registros[0] = -1;
@@ -168,6 +259,7 @@ void op_DIV(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
     if (valorB != 0)
     {
         int resultado = valorA / valorB;
+        Registros[16] = valorA % valorB; // guardar el resto en AC
         //  bit 32 N bit 31 Z bit 30 C (acarreo) bit 29 V (desbordamiento) demas 28 bits reservados
         if (resultado == 0)
             Registros[17] = Registros[17] | (1 << 30); // prende Z
@@ -402,7 +494,11 @@ void op_NOT(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 }
 void op_RND(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    int resultado = rand(); // numero aleatorio
+    int limite = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos); // el segundo operando es el limite
+    int resultado = rand();                                                                       // numero aleatorio
+
+    if (limite > 0)
+        resultado = rand() % (limite + 1);
 
     Registros[17] = 0; // iniciamos CC
     if (resultado == 0)

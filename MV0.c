@@ -27,7 +27,7 @@ struct Instruccion
 };
 
 const struct Instruccion tablaInstrucciones[] = {
-    {"SYS", 0x00, 1, NULL},
+    {"SYS", 0x00, 1, op_SYS},
     {"JMP", 0x01, 1, op_JMP},
     {"JP", 0x02, 1, op_JP},
     {"JN", 0x03, 1, op_JN},
@@ -273,6 +273,12 @@ void AsignarSegmentos(int LargoCod, Segmento TablaSegmentos[], int Registros[])
     TablaSegmentos[1].base = LargoCod;
     TablaSegmentos[1].size = 16384 - LargoCod;
 
+    for (int i = 2; i < 8; i++) // Los que no se utilizan -1
+    {
+        TablaSegmentos[i].base = -1;
+        TablaSegmentos[i].size = -1;
+    }
+
     Registros[26] = 0 << 16; // CS seg 0 offset 0
     Registros[27] = 1 << 16; // DS seg 1 offset 0
 }
@@ -364,14 +370,15 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
         {
             tablaInstrucciones[codOperacion].ejecutar(MemoriaPrincipal, Registros, TablaSegmentos);
         }
-        else{
+        else
+        {
             printf("Error: Codigo de operacion invalido: %02X\n", codOperacion);
-            codOperacion = 0x0F; 
-            Registros[0] = -1;  // forzamos la detencion de la maquina
+            codOperacion = 0x0F;
+            Registros[0] = -1; // forzamos la detencion de la maquina
         }
-        // avanzamos el ip si no fue STOP
-        if (codOperacion != 0x0F)
+        if (codOperacion == 0x0F)
             break;
+        // avanzamos el ip si no fue STOP
         if (Registros[0] == ipPrevio) // si la instruccion no modifico el ip
             Registros[0] = pos + 1;
     }
