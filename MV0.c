@@ -289,9 +289,9 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
     int pos, cantOP;
     Registros[0] = Registros[26]; // IP se inicia aputando a la primera instruccion del codigo, mismo valor que CS
 
-    while (Registros[0] >= 0 && Registros[0] < TablaSegmentos[0].size)
+    while ((Registros[0] & 0xFFFF) >= 0 && (Registros[0] & 0xFFFF) < TablaSegmentos[0].size)
     { // Se itera hasta que IP apunte fuera del limite del segmento de codigo
-        pos = Registros[0];
+        pos = Registros[0] & 0xFFFF;
         codOperacion = Registros[1] = MemoriaPrincipal[pos] & 0x1F; // decodifico y guardo el codigo limpio en OPC
         cantOP = tablaInstrucciones[codOperacion].cantOP;
         if (cantOP == 0)
@@ -305,18 +305,18 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
 
             if (operandoA == 1)
             {
-                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
             }
             else if (operandoA == 2)
             {
-                Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
-                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
+                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
             }
-            else
+            else if (operandoA == 3)
             {
-                Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 16);
-                Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
-                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 16);
+                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
+                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
             }
         }
 
@@ -329,33 +329,34 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
 
             if (operandoB == 1)
             {
-                Registros[3] = Registros[3] | MemoriaPrincipal[++pos];
+                Registros[3] = Registros[3] | (unsigned char)MemoriaPrincipal[++pos];
             }
             else if (operandoB == 2)
             {
-                Registros[3] = Registros[3] | (MemoriaPrincipal[++pos] << 8);
-                Registros[3] = Registros[3] | MemoriaPrincipal[++pos];
+                Registros[3] = Registros[3] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
+                Registros[3] = Registros[3] | (unsigned char)MemoriaPrincipal[++pos];
             }
-            else
+            else if (operandoB == 3)
             {
-                Registros[3] = Registros[3] | (MemoriaPrincipal[++pos] << 16);
-                Registros[3] = Registros[3] | (MemoriaPrincipal[++pos] << 8);
-                Registros[3] = Registros[3] | MemoriaPrincipal[++pos];
+                Registros[3] = Registros[3] | ((unsigned char)MemoriaPrincipal[++pos] << 16);
+                Registros[3] = Registros[3] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
+                Registros[3] = Registros[3] | (unsigned char)MemoriaPrincipal[++pos];
             }
+
             if (operandoA == 1)
             {
-                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
             }
             else if (operandoA == 2)
             {
-                Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
-                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
+                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
             }
-            else
+            else if (operandoA == 3)
             {
-                Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 16);
-                Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
-                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 16);
+                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
+                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
             }
         }
 
@@ -379,8 +380,8 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
         if (codOperacion == 0x0F)
             break;
         // avanzamos el ip si no fue STOP
-        if (Registros[0] == ipPrevio) // si la instruccion no modifico el ip
-            Registros[0] = pos + 1;
+        if (Registros[0] == ipPrevio)
+            Registros[0] = (Registros[0] & 0xFFFF0000) | ((pos + 1) & 0xFFFF);
     }
 }
 
@@ -424,7 +425,6 @@ int main(int argc, char *argv[])
         if (mostrar_disassembler)
             MostrarCodigo(MemoriaPrincipal, cabecera, LargoCod);
         EjecutarMaquina(MemoriaPrincipal, TablaSegmentos, Registros);
-        
     }
 
     return 0;

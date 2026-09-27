@@ -43,25 +43,25 @@ int ObtenerValorOperando(int operando, char MemoriaPrincipal[], int Registros[],
     {
         int dirFisica = CalcularDireccionFisica(valor, MemoriaPrincipal, Registros, TablaSegmentos); // Ya guarda en el MAR
         // reconstruimos directamente en el MBR
-        Registros[6] = (MemoriaPrincipal[dirFisica] << 24) |
-                       (MemoriaPrincipal[dirFisica + 1] << 16) |
-                       (MemoriaPrincipal[dirFisica + 2] << 8) |
-                       MemoriaPrincipal[dirFisica + 3];
+        Registros[6] = ((unsigned char)MemoriaPrincipal[dirFisica] << 24) |
+                       ((unsigned char)MemoriaPrincipal[dirFisica + 1] << 16) |
+                       ((unsigned char)MemoriaPrincipal[dirFisica + 2] << 8) |
+                       (unsigned char)MemoriaPrincipal[dirFisica + 3];
         return Registros[6]; // devolvemos MBR
     }
     return 0; // error o defecto, habria que ver despues como tratamos con los errores
               // porque seguro los codigos que nos van a dar a probar van a tener errores aproposito
 }
 // guarda el resultado en el destino (OP1)
-void GuardarDestino( int operandoDestino, int resultado, char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void GuardarDestino(int operandoDestino, int resultado, char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int tipo = (operandoDestino >> 24) & 0xFF; // tipo 1 o 3
     int valor = operandoDestino & 0x00FFFFFF;  // la ubicacion fisica
 
     if (tipo == 1)                           // registro
         Registros[valor & 0x1F] = resultado; // pisamos el resultado en el indice valor, 5 bits
-        
-    else if (tipo == 3)                      // memoria
+
+    else if (tipo == 3) // memoria
     {
         int dirFisica = CalcularDireccionFisica(valor, MemoriaPrincipal, Registros, TablaSegmentos);
         Registros[6] = resultado; // MBR
@@ -73,7 +73,7 @@ void GuardarDestino( int operandoDestino, int resultado, char MemoriaPrincipal[]
     else
     {
         printf("\nError: Operando de destino invalido\n");
-        printf("\ntipo: %x   valor: %x     OPdest: %x",tipo,valor,operandoDestino);
+        printf("\ntipo: %x   valor: %x     OPdest: %x", tipo, valor, operandoDestino);
     }
 }
 
@@ -198,11 +198,9 @@ void op_MOV(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 void op_ADD(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
-    printf("\nvalorA: %X",valorA);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos);
     int resultado = valorA + valorB;
-    printf("resultado: %d",resultado);
-    
+
     Registros[17] = 0; // iniciamos CC
     // ayudamemoria xd
     //  bit 32 N bit 31 Z bit 30 C (acarreo) bit 29 V (desbordamiento) demas 28 bits reservados
