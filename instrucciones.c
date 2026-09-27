@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <stdio.h>
 #include "instrucciones.h"
 #include <limits.h>
 
@@ -34,7 +35,6 @@ int ObtenerValorOperando(int operando, char MemoriaPrincipal[], int Registros[],
 {
     int tipo = (operando >> 24) & 0xFF; // tipo 1,2 y 3
     int valor = operando & 0x00FFFFFF;  // valor crudo
-
     if (tipo == 1)                      // registro
         return Registros[valor & 0x1F]; // lo que contiene el registro de indice valor aca tambien me habia olvidado que eran 5bits nada mas
     else if (tipo == 2)                 // inmediato
@@ -53,13 +53,14 @@ int ObtenerValorOperando(int operando, char MemoriaPrincipal[], int Registros[],
               // porque seguro los codigos que nos van a dar a probar van a tener errores aproposito
 }
 // guarda el resultado en el destino (OP1)
-void GuardarDestino(int operandoDestino, int resultado, char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+void GuardarDestino( int operandoDestino, int resultado, char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int tipo = (operandoDestino >> 24) & 0xFF; // tipo 1 o 3
     int valor = operandoDestino & 0x00FFFFFF;  // la ubicacion fisica
 
     if (tipo == 1)                           // registro
         Registros[valor & 0x1F] = resultado; // pisamos el resultado en el indice valor, 5 bits
+        
     else if (tipo == 3)                      // memoria
     {
         int dirFisica = CalcularDireccionFisica(valor, MemoriaPrincipal, Registros, TablaSegmentos);
@@ -71,13 +72,14 @@ void GuardarDestino(int operandoDestino, int resultado, char MemoriaPrincipal[],
     }
     else
     {
-        printf("Error: Operando de destino invalido\n");
+        printf("\nError: Operando de destino invalido\n");
+        printf("\ntipo: %x   valor: %x     OPdest: %x",tipo,valor,operandoDestino);
     }
 }
 
 void ImprimirBinario(int valor, int tamByte)
 {
-    print("0b");
+    printf("0b");
     for (int i = (tamByte * 8) - 1; i >= 0; i--)
         printf("%d", (valor >> i) & 1);
 }
@@ -90,7 +92,6 @@ void op_SYS(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
     int cantCeldas = Registros[12] & 0xFFFF;       // ecx bajo cantidad
     int tamBytes = (Registros[12] >> 16) & 0xFFFF; // ecx alto tamaño bytes
     int dirLogica = Registros[13];                 // edx puntero de inicio
-
     if (tamBytes <= 0)
         tamBytes = 4; // por defecto 4 bytes
 
@@ -167,7 +168,7 @@ void op_SYS(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
                 for (int j = 0; j < tamBytes; j++)
                 {
                     char c = (valor >> (8 * (tamBytes - 1 - j))) & 0xFF;
-                    print("%c", c);
+                    printf("%c", c);
                 }
                 printf(" ");
             }
@@ -193,12 +194,15 @@ void op_MOV(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
     GuardarDestino(Registros[2], valorOrigen, MemoriaPrincipal, Registros, TablaSegmentos);
 }
 // despues en add y otras funciones volvemos a usar las auxiliares,
-// creo aca las funciones pero vacias, para q compile(pollio)
+
 void op_ADD(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
+    printf("\nvalorA: %X",valorA);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos);
     int resultado = valorA + valorB;
+    printf("resultado: %d",resultado);
+    
     Registros[17] = 0; // iniciamos CC
     // ayudamemoria xd
     //  bit 32 N bit 31 Z bit 30 C (acarreo) bit 29 V (desbordamiento) demas 28 bits reservados
@@ -467,16 +471,15 @@ void op_JZ(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 
 void op_LDH(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
-    int destino = Registros[2];
+    int valorA = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos);
+    int destino = Registros[2] & 0x1F;
 
     Registros[destino] = (Registros[destino] & 0xFFFF) | ((valorA & 0XFFFF) << 16);
 }
 void op_LDL(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
-    int registroDestino = Registros[2];
-
+    int valorA = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos);
+    int registroDestino = Registros[2] & 0x1F;
     Registros[registroDestino] = (Registros[registroDestino] & 0xFFFF0000) | (valorA & 0xFFFF);
 }
 void op_NOT(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])

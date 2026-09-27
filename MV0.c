@@ -424,6 +424,7 @@ int main(int argc, char *argv[])
         if (mostrar_disassembler)
             MostrarCodigo(MemoriaPrincipal, cabecera, LargoCod);
         EjecutarMaquina(MemoriaPrincipal, TablaSegmentos, Registros);
+        
     }
 
     return 0;
