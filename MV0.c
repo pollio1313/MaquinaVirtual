@@ -96,14 +96,14 @@ const char *tablaRegistros[32] = {
     "Programa"   // 31
 };
 
-void Lectura(char MemoriaPrincipal[16384], const char *filename, char *cabecera, uint16_t *LargoCod)
+void Lectura(unsigned char MemoriaPrincipal[16384], const char *filename, char *cabecera, uint16_t *LargoCod)
 {
     FILE *archivoVMX;
     int i = 0, j = 0, valor;
     archivoVMX = fopen(filename, "rb"); // abro el archivo vmx //aclarar que es binario
     if (archivoVMX == NULL)
     {
-        printf("NO SE ABRIO CAPO");
+        printf("NO ABRIO");
     }
     else
     {
@@ -133,7 +133,7 @@ void MostrarBinario(char byte)
     }
 }
 
-void MostrarCodigo(char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoCod) // ya que tenemos LargoCod no es necesario volver a calcularlo
+void MostrarCodigo(unsigned char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoCod) // ya que tenemos LargoCod no es necesario volver a calcularlo
 {
     int i = 0, j = 0, cant;
     char codOperacion, OperandoA, OperandoB, valorOPA[3] = {0}, valorOPB[3] = {0};
@@ -283,7 +283,7 @@ void AsignarSegmentos(int LargoCod, Segmento TablaSegmentos[], int Registros[])
     Registros[27] = 1 << 16; // DS seg 1 offset 0
 }
 
-void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Registros[])
+void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[], int Registros[])
 {
     char codOperacion, operandoA, operandoB;
     int pos, cantOP;
@@ -388,9 +388,9 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
 int main(int argc, char *argv[])
 {
 
-    int Registros[32] = {0};      // Int ya ocupa 4bytes
-    char MemoriaPrincipal[16384]; // La ram es unidimensional un byte tras otro
-    Segmento TablaSegmentos[8];   // 0 cs, 1 ds,
+    int Registros[32] = {0};               // Int ya ocupa 4bytes
+    unsigned char MemoriaPrincipal[16384]; // La ram es unidimensional un byte tras otro
+    Segmento TablaSegmentos[8];            // 0 cs, 1 ds,
     uint16_t LargoCod;
     char cabecera[6];
 
