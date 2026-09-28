@@ -172,27 +172,30 @@ void op_SYS(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 
             if (modo & 0x10) // Binario
                 ImprimirBinario(valor, tamBytes);
-            else if (modo & 0x08) // Hexa
-                printf("0x%X", valor);
-            else if (modo & 0x04) // Octal
-                printf("0o%o", valor);
-            else if (modo & 0x02) // Caracteres
+
+            if (modo & 0x08) // Hexa
+                printf(" 0x%X ", valor);
+
+            if (modo & 0x04) // Octal
+                printf(" 0o%o ", valor);
+
+            if (modo & 0x02) // Caracteres
             {
                 for (int j = 0; j < tamBytes; j++)
                 {
                     char c = (valor >> (8 * (tamBytes - 1 - j))) & 0xFF;
-                    printf("%c", c);
+                    printf(" %c ", c);
                 }
             }
-            else // decimal
+
+            if (modo & 0x01) // Decimal
             {
-                // extensión de signo si tamBytes == 1 o 2 y el valor es negativo
                 if (tamBytes == 1 && (valor & 0x80))
                     valor |= 0xFFFFFF00;
                 else if (tamBytes == 2 && (valor & 0x8000))
                     valor |= 0xFFFF0000;
 
-                printf("%d", valor);
+                printf(" %d ", valor);
             }
             printf("\n");
         }
@@ -345,7 +348,6 @@ void op_XOR(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
         Registros[17] = Registros[17] | (1 << 30); // prende Z
     if (resultado < 0)
         Registros[17] = Registros[17] | (1 << 31); // prende N
-
     GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros, TablaSegmentos);
 }
 
@@ -534,6 +536,11 @@ void op_SWAP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos);
+
+    if (valorB == 0)
+        Registros[17] = Registros[17] | (1 << 30); // prende Z
+    if (valorA < 0)
+        Registros[17] = Registros[17] | (1 << 31); // prende N
 
     GuardarDestino(Registros[2], valorB, MemoriaPrincipal, Registros, TablaSegmentos);
     GuardarDestino(Registros[3], valorA, MemoriaPrincipal, Registros, TablaSegmentos);

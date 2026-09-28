@@ -10,3 +10,4 @@
         ldl ecx, 4
         mov eax, 0x12       ; binario + caracter
         sys 2
+        stop

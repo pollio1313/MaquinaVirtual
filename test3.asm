@@ -15,3 +15,4 @@
         ldl ecx, 3
         mov eax, 0x09       ; decimal + hexa
         sys 2
+        stop

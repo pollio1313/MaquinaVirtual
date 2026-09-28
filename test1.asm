@@ -21,3 +21,4 @@ inicio: mov [0], 10
         ldl ecx, 5
         mov eax, 1
         sys 2
+        stop
