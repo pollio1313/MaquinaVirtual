@@ -89,9 +89,10 @@ void op_SYS(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int subcodigo = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     int modo = Registros[10];                      // EAX formato
-    int cantCeldas = Registros[12] & 0xFFFF;       // ecx bajo cantidad
-    int tamBytes = (Registros[12] >> 16) & 0xFFFF; // ecx alto tamaño bytes
-    int dirLogica = Registros[13];                 // edx puntero de inicio
+    int cantCeldas = Registros[12] & 0xFFFF;       // ECX bajo cantidad
+    int tamBytes = (Registros[12] >> 16) & 0xFFFF; // ECX alto tamaño bytes
+    int dirLogica = Registros[13];                 // EDX puntero de inicio
+
     if (tamBytes <= 0)
         tamBytes = 4; // por defecto 4 bytes
 
@@ -100,7 +101,7 @@ void op_SYS(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
         int numSeg = (dirLogica >> 16) & 0xFFFF;
         int offset = dirLogica & 0xFFFF;
 
-        // validar segmento
+        // Validar segmento
         if (numSeg < 0 || numSeg >= 8 || TablaSegmentos[numSeg].size == 0xFFFF || (short)TablaSegmentos[numSeg].base == -1)
         {
             printf("\n[ERROR] Fallo de segmento en SYS (Segmento invalido %d)\n", numSeg);
@@ -116,66 +117,86 @@ void op_SYS(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
         Registros[4] = dirLogica;                               // LAR
         Registros[5] = (tamBytes << 16) | (dirFisica & 0xFFFF); // MAR
 
-        printf("[%04X]: ", dirFisica); //[XXXX]
-        if (subcodigo == 1)            // read
+        printf("[%04X]: ", dirFisica);
+
+        if (subcodigo == 1) // READ
         {
             int dato = 0;
-            if (modo & 0x02) // caracter
+            if (modo & 0x02) // Caracter
             {
                 char c;
                 scanf(" %c", &c);
                 dato = c;
             }
-            else if (modo & 0x08) // hexa
+            else if (modo & 0x08) // Hexa
                 scanf("%x", &dato);
-            else if (modo & 0x04) // octal
+            else if (modo & 0x04) // Octal
                 scanf("%o", &dato);
-            else if (modo & 0x10) // bin
+            else if (modo & 0x10) // Binario
             {
-                char binStr[35]; // 0b + 32 bits + \0
+                char binStr[35];
                 scanf("%s", binStr);
                 int inicio = 0;
                 if (binStr[0] == '0' && (binStr[1] == 'b' || binStr[1] == 'B'))
-                {
                     inicio = 2;
-                }
                 for (int j = inicio; binStr[j] != '\0'; j++)
                     if (binStr[j] == '0' || binStr[j] == '1')
-                        dato = (dato << 1) | (binStr[j] - '0'); // convierto en ascii el numero
+                        dato = (dato << 1) | (binStr[j] - '0');
             }
-            else // decima por defecto (0x01)
+            else // Decimal por defecto (0x01)
                 scanf("%d", &dato);
 
             Registros[6] = dato; // MBR
+
+            // Si es un número (no caracter) y tamBytes < 4, limpiamos la celda de 4 bytes
+            if (!(modo & 0x02))
+            {
+                for (int k = 0; k < 4; k++)
+                    MemoriaPrincipal[dirFisica + k] = 0;
+            }
+
+            // escribimos el dato alineado al final de la celda de 4 bytes si es numero
+            int alineacion = (!(modo & 0x02) && tamBytes < 4) ? (4 - tamBytes) : 0;
             for (int j = 0; j < tamBytes; j++)
-                MemoriaPrincipal[dirFisica + j] = (dato >> (8 * (tamBytes - 1 - j))) & 0xFF;
+                MemoriaPrincipal[dirFisica + alineacion + j] = (dato >> (8 * (tamBytes - 1 - j))) & 0xFF;
         }
-        else if (subcodigo == 2) // write
+        else if (subcodigo == 2) // WRITE
         {
             int valor = 0;
+            int alineacion = (!(modo & 0x02) && tamBytes < 4) ? (4 - tamBytes) : 0;
+
             for (int j = 0; j < tamBytes; j++)
-                valor = (valor << 8) | MemoriaPrincipal[dirFisica + j];
+                valor = (valor << 8) | (unsigned char)MemoriaPrincipal[dirFisica + alineacion + j];
 
             Registros[6] = valor; // MBR
-            if (modo & 0x10)      // bin
+
+            if (modo & 0x10) // Binario
                 ImprimirBinario(valor, tamBytes);
-            else if (modo & 0x08) // hexa
-                printf("0x%X ", valor);
-            else if (modo & 0x04) // octal
-                printf("0o%o ", valor);
-            else if (modo & 0x02) // caract
+            else if (modo & 0x08) // Hexa
+                printf("0x%X", valor);
+            else if (modo & 0x04) // Octal
+                printf("0o%o", valor);
+            else if (modo & 0x02) // Caracteres
             {
                 for (int j = 0; j < tamBytes; j++)
                 {
                     char c = (valor >> (8 * (tamBytes - 1 - j))) & 0xFF;
                     printf("%c", c);
                 }
-                printf(" ");
             }
-            else
+            else // decimal
+            {
+                // extensión de signo si tamBytes == 1 o 2 y el valor es negativo
+                if (tamBytes == 1 && (valor & 0x80))
+                    valor |= 0xFFFFFF00;
+                else if (tamBytes == 2 && (valor & 0x8000))
+                    valor |= 0xFFFF0000;
+
                 printf("%d", valor);
+            }
             printf("\n");
         }
+
         dirLogica += tamBytes; // siguiente celda
     }
 }
