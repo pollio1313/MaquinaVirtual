@@ -152,14 +152,9 @@ void op_SYS(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
         else if (subcodigo == 2) // write
         {
             int valor = 0;
-<<<<<<< Updated upstream
-            for (int j = 0; j < tamBytes; j++)
-                valor = (valor << 8) | MemoriaPrincipal[dirFisica + j];
-=======
 
             for (int j = 0; j < tamBytes; j++)
                 valor = (valor << 8) | (unsigned char)MemoriaPrincipal[dirFisica + j];
->>>>>>> Stashed changes
 
             Registros[6] = valor; // MBR
             if (modo & 0x10)      // bin
