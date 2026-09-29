@@ -152,8 +152,14 @@ void op_SYS(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
         else if (subcodigo == 2) // write
         {
             int valor = 0;
+<<<<<<< Updated upstream
             for (int j = 0; j < tamBytes; j++)
                 valor = (valor << 8) | MemoriaPrincipal[dirFisica + j];
+=======
+
+            for (int j = 0; j < tamBytes; j++)
+                valor = (valor << 8) | (unsigned char)MemoriaPrincipal[dirFisica + j];
+>>>>>>> Stashed changes
 
             Registros[6] = valor; // MBR
             if (modo & 0x10)      // bin
@@ -218,16 +224,23 @@ void op_SUB(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos);
     int resultado = valorA - valorB;
-    Registros[17] = 0; // iniciamos CC
-    //  bit 32 N bit 31 Z bit 30 C (acarreo) bit 29 V (desbordamiento) demas 28 bits reservados
+
+    Registros[17] = 0; // Iniciamos CC
+
     if (resultado == 0)
-        Registros[17] = Registros[17] | (1 << 30); // prende Z
+        Registros[17] = Registros[17] | (1 << 30); // Prende Z
     if (resultado < 0)
-        Registros[17] = Registros[17] | (1 << 31);                                                   // prende N
-    if ((valorA > 0 && valorB < 0 && resultado < 0) || (valorA < 0 && valorB > 0 && resultado >= 0)) // casos de desbordamiento
-        Registros[17] = Registros[17] | (1 << 28);                                                   // Prende V
-    if ((unsigned int)valorA < (unsigned int)valorB)
+        Registros[17] = Registros[17] | (1 << 31); // Prende N
+
+    // Casos de desbordamiento (V)
+    if ((valorA > 0 && valorB < 0 && resultado < 0) || (valorA < 0 && valorB > 0 && resultado >= 0))
+        Registros[17] = Registros[17] | (1 << 28); // Prende V
+
+    // Acarreo correcto para resta (A + ~B + 1)
+    unsigned long long sumaC = (unsigned long long)(unsigned int)valorA + (unsigned long long)(unsigned int)(~valorB) + 1ULL;
+    if (sumaC > 0xFFFFFFFFULL)
         Registros[17] = Registros[17] | (1 << 29); // Prende C
+
     GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros, TablaSegmentos);
 }
 
@@ -401,14 +414,19 @@ void op_CMP(char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos);
     int resultado = valorA - valorB;
-    Registros[17] = 0; // iniciamos CC
+
+    Registros[17] = 0; // Iniciamos CC
+
     if (resultado == 0)
-        Registros[17] = Registros[17] | (1 << 30); // prende Z
+        Registros[17] = Registros[17] | (1 << 30); // Prende Z
     if (resultado < 0)
-        Registros[17] = Registros[17] | (1 << 31);                                                   // prende N
-    if ((valorA > 0 && valorB < 0 && resultado < 0) || (valorA < 0 && valorB > 0 && resultado >= 0)) // casos de desbordamiento
-        Registros[17] = Registros[17] | (1 << 28);                                                   // Prende V
-    if ((unsigned int)valorA < (unsigned int)valorB)
+        Registros[17] = Registros[17] | (1 << 31); // Prende N
+
+    if ((valorA > 0 && valorB < 0 && resultado < 0) || (valorA < 0 && valorB > 0 && resultado >= 0))
+        Registros[17] = Registros[17] | (1 << 28); // Prende V
+
+    unsigned long long sumaC = (unsigned long long)(unsigned int)valorA + (unsigned long long)(unsigned int)(~valorB) + 1ULL;
+    if (sumaC > 0xFFFFFFFFULL)
         Registros[17] = Registros[17] | (1 << 29); // Prende C
 }
 

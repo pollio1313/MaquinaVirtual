@@ -287,21 +287,29 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
 {
     char codOperacion, operandoA, operandoB;
     int pos, cantOP;
-    Registros[0] = Registros[26]; // IP se inicia aputando a la primera instruccion del codigo, mismo valor que CS
+    Registros[0] = Registros[26]; // IP se inicia apuntando a la primera instruccion (CS)
 
+<<<<<<< Updated upstream
     while (Registros[0] >= 0 && Registros[0] < TablaSegmentos[0].size)
     { // Se itera hasta que IP apunte fuera del limite del segmento de codigo
         pos = Registros[0];
         codOperacion = Registros[1] = MemoriaPrincipal[pos] & 0x1F; // decodifico y guardo el codigo limpio en OPC
+=======
+    while ((Registros[0] & 0xFFFF) >= 0 && (Registros[0] & 0xFFFF) < TablaSegmentos[0].size)
+    {
+        pos = Registros[0] & 0xFFFF;
+        codOperacion = Registros[1] = MemoriaPrincipal[pos] & 0x1F;
+>>>>>>> Stashed changes
         cantOP = tablaInstrucciones[codOperacion].cantOP;
+
         if (cantOP == 0)
         {
             Registros[2] = Registros[3] = 0;
         }
-        if (cantOP == 1)
+        else if (cantOP == 1)
         {
             operandoA = (MemoriaPrincipal[pos] >> 6) & 0x03;
-            Registros[2] = operandoA << 24; // guardamos OP A en OP1 son de 32 bits
+            Registros[2] = operandoA << 24;
 
             if (operandoA == 1)
             {
@@ -319,13 +327,12 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
                 Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
             }
         }
-
-        if (cantOP == 2)
+        else if (cantOP == 2)
         {
             operandoB = (MemoriaPrincipal[pos] >> 6) & 0x03;
             operandoA = (MemoriaPrincipal[pos] >> 4) & 0x03;
-            Registros[2] = operandoA << 24; // A en OP1
-            Registros[3] = operandoB << 24; // B en OP2
+            Registros[2] = operandoA << 24;
+            Registros[3] = operandoB << 24;
 
             if (operandoB == 1)
             {
@@ -364,23 +371,19 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
             printf("\n[ERROR] Instruccion invalida: 0x%02X en IP [%04X]\n", (unsigned char)codOperacion, pos);
             exit(1);
         }
-        // ejecucion
-        int ipPrevio = Registros[0];
-        if (tablaInstrucciones[codOperacion].ejecutar != NULL)
-        {
-            tablaInstrucciones[codOperacion].ejecutar(MemoriaPrincipal, Registros, TablaSegmentos);
-        }
-        else
-        {
-            printf("Error: Codigo de operacion invalido: %02X\n", codOperacion);
-            codOperacion = 0x0F;
-            Registros[0] = -1; // forzamos la detencion de la maquina
-        }
-        if (codOperacion == 0x0F)
+
+        Registros[0] = (Registros[0] & 0xFFFF0000) | ((pos + 1) & 0xFFFF);
+
+        tablaInstrucciones[codOperacion].ejecutar(MemoriaPrincipal, Registros, TablaSegmentos);
+
+        if (codOperacion == 0x0F) // STOP
             break;
+<<<<<<< Updated upstream
         // avanzamos el ip si no fue STOP
         if (Registros[0] == ipPrevio) // si la instruccion no modifico el ip
             Registros[0] = pos + 1;
+=======
+>>>>>>> Stashed changes
     }
 }
 
