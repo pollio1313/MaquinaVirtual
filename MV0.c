@@ -96,14 +96,14 @@ const char *tablaRegistros[32] = {
     "Programa"   // 31
 };
 
-void Lectura(char MemoriaPrincipal[16384], const char *filename, char *cabecera, uint16_t *LargoCod)
+void Lectura(unsigned char MemoriaPrincipal[16384], const char *filename, char *cabecera, uint16_t *LargoCod)
 {
     FILE *archivoVMX;
     int i = 0, j = 0, valor;
     archivoVMX = fopen(filename, "rb"); // abro el archivo vmx //aclarar que es binario
     if (archivoVMX == NULL)
     {
-        printf("NO SE ABRIO CAPO");
+        printf("NO ABRIO");
     }
     else
     {
@@ -133,7 +133,7 @@ void MostrarBinario(char byte)
     }
 }
 
-void MostrarCodigo(char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoCod) // ya que tenemos LargoCod no es necesario volver a calcularlo
+void MostrarCodigo(unsigned char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoCod) // ya que tenemos LargoCod no es necesario volver a calcularlo
 {
     int i = 0, j = 0, cant;
     char codOperacion, OperandoA, OperandoB, valorOPA[3] = {0}, valorOPB[3] = {0};
@@ -283,23 +283,16 @@ void AsignarSegmentos(int LargoCod, Segmento TablaSegmentos[], int Registros[])
     Registros[27] = 1 << 16; // DS seg 1 offset 0
 }
 
-void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Registros[])
+void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[], int Registros[])
 {
     char codOperacion, operandoA, operandoB;
     int pos, cantOP;
     Registros[0] = Registros[26]; // IP se inicia apuntando a la primera instruccion (CS)
 
-<<<<<<< Updated upstream
-    while (Registros[0] >= 0 && Registros[0] < TablaSegmentos[0].size)
-    { // Se itera hasta que IP apunte fuera del limite del segmento de codigo
-        pos = Registros[0];
-        codOperacion = Registros[1] = MemoriaPrincipal[pos] & 0x1F; // decodifico y guardo el codigo limpio en OPC
-=======
     while ((Registros[0] & 0xFFFF) >= 0 && (Registros[0] & 0xFFFF) < TablaSegmentos[0].size)
     {
         pos = Registros[0] & 0xFFFF;
         codOperacion = Registros[1] = MemoriaPrincipal[pos] & 0x1F;
->>>>>>> Stashed changes
         cantOP = tablaInstrucciones[codOperacion].cantOP;
 
         if (cantOP == 0)
@@ -313,18 +306,18 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
 
             if (operandoA == 1)
             {
-                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
             }
             else if (operandoA == 2)
             {
-                Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
-                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
+                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
             }
-            else
+            else if (operandoA == 3)
             {
-                Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 16);
-                Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
-                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 16);
+                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
+                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
             }
         }
         else if (cantOP == 2)
@@ -336,33 +329,34 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
 
             if (operandoB == 1)
             {
-                Registros[3] = Registros[3] | MemoriaPrincipal[++pos];
+                Registros[3] = Registros[3] | (unsigned char)MemoriaPrincipal[++pos];
             }
             else if (operandoB == 2)
             {
-                Registros[3] = Registros[3] | (MemoriaPrincipal[++pos] << 8);
-                Registros[3] = Registros[3] | MemoriaPrincipal[++pos];
+                Registros[3] = Registros[3] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
+                Registros[3] = Registros[3] | (unsigned char)MemoriaPrincipal[++pos];
             }
-            else
+            else if (operandoB == 3)
             {
-                Registros[3] = Registros[3] | (MemoriaPrincipal[++pos] << 16);
-                Registros[3] = Registros[3] | (MemoriaPrincipal[++pos] << 8);
-                Registros[3] = Registros[3] | MemoriaPrincipal[++pos];
+                Registros[3] = Registros[3] | ((unsigned char)MemoriaPrincipal[++pos] << 16);
+                Registros[3] = Registros[3] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
+                Registros[3] = Registros[3] | (unsigned char)MemoriaPrincipal[++pos];
             }
+
             if (operandoA == 1)
             {
-                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
             }
             else if (operandoA == 2)
             {
-                Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
-                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
+                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
             }
-            else
+            else if (operandoA == 3)
             {
-                Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 16);
-                Registros[2] = Registros[2] | (MemoriaPrincipal[++pos] << 8);
-                Registros[2] = Registros[2] | MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 16);
+                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
+                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
             }
         }
 
@@ -378,21 +372,15 @@ void EjecutarMaquina(char MemoriaPrincipal[], Segmento TablaSegmentos[], int Reg
 
         if (codOperacion == 0x0F) // STOP
             break;
-<<<<<<< Updated upstream
-        // avanzamos el ip si no fue STOP
-        if (Registros[0] == ipPrevio) // si la instruccion no modifico el ip
-            Registros[0] = pos + 1;
-=======
->>>>>>> Stashed changes
     }
 }
 
 int main(int argc, char *argv[])
 {
 
-    int Registros[32] = {0};      // Int ya ocupa 4bytes
-    char MemoriaPrincipal[16384]; // La ram es unidimensional un byte tras otro
-    Segmento TablaSegmentos[8];   // 0 cs, 1 ds,
+    int Registros[32] = {0};               // Int ya ocupa 4bytes
+    unsigned char MemoriaPrincipal[16384]; // La ram es unidimensional un byte tras otro
+    Segmento TablaSegmentos[8];            // 0 cs, 1 ds,
     uint16_t LargoCod;
     char cabecera[6];
 
