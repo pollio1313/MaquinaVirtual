@@ -1,4 +1,16 @@
 #include <stdint.h>
+// estructura para almacenar los tamaños obtenidos de la cabecera
+typedef struct
+{
+    uint16_t tamCS;
+    uint16_t tamDS;
+    uint16_t tamES;
+    uint16_t tamSS;
+    uint16_t tamKS;
+    uint16_t entryPoint;
+    uint16_t tamPS;
+    int version;
+} HeaderVM;
 
 typedef struct
 { // para organizar un segmento necesitamos anotar dos datos: donde empieza y cuanto mide

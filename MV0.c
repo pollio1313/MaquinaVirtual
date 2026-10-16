@@ -96,33 +96,224 @@ const char *tablaRegistros[32] = {
     "Programa"   // 31
 };
 
-void Lectura(unsigned char MemoriaPrincipal[16384], const char *filename, char *cabecera, uint16_t *LargoCod)
+// Lee dos bytes en formato Big-Endian
+static uint16_t LeerWordBE(FILE *arch)
 {
-    FILE *archivoVMX;
-    int i = 0, j = 0, valor;
-    archivoVMX = fopen(filename, "rb"); // abro el archivo vmx //aclarar que es binario
-    if (archivoVMX == NULL)
+    unsigned char b[2];
+    if (fread(b, 1, 2, arch) != 2)
+        return 0;
+    return (uint16_t)((b[0] << 8) | b[1]);
+}
+
+int CargarProgramaVMX(const char *filename, unsigned char **memoria, int tamMemoriaBytes, HeaderVM *hdr, char *argvParams[], int cantParams)
+{
+    FILE *arch = fopen(filename, "rb");
+    if (!arch)
     {
-        printf("NO ABRIO");
+        printf("[ERROR] No se pudo abrir el archivo %s\n", filename);
+        exit(1);
+    }
+
+    char firma[5];
+    if (fread(firma, 1, 5, arch) != 5 || strncmp(firma, "VMX26", 5) != 0)
+    {
+        printf("[ERROR] Formato de archivo invalido (no es VMX26)\n");
+        fclose(arch);
+        exit(1);
+    }
+
+    unsigned char ver;
+    fread(&ver, 1, 1, arch);
+    hdr->version = ver;
+
+    if (ver == 1)
+    {
+        hdr->tamCS = LeerWordBE(arch);
+    }
+    else if (ver == 2)
+    {
+        hdr->tamCS = LeerWordBE(arch);
+        hdr->tamDS = LeerWordBE(arch);
+        hdr->tamES = LeerWordBE(arch);
+        hdr->tamSS = LeerWordBE(arch);
+        hdr->tamKS = LeerWordBE(arch);
+        hdr->entryPoint = LeerWordBE(arch);
     }
     else
     {
-        fread(cabecera, sizeof(char), 6, archivoVMX); // leo la parte q dice version etc
-        char largo[2];
-        fread(largo, sizeof(char), 2, archivoVMX);
-
-        *LargoCod = (largo[0] << 8) | largo[1]; // habia un problema con la lectura y ahroa lee los dos bytes y aca los une
-
-        if ((strncmp(cabecera, "VMX26", 5) == 0) && (cabecera[5] == 1))
-        {                                                                     // solo corroboro al version
-            fread(&MemoriaPrincipal[0], sizeof(char), *LargoCod, archivoVMX); // cargo en memoria solo el codigo en adelante
-        }
-        else
-        {
-            printf("no se acepta esa version %s", cabecera);
-        }
-        fclose(archivoVMX);
+        printf("[ERROR] Version de archivo VMX no soportada: %d\n", ver);
+        fclose(arch);
+        exit(1);
     }
+
+    // calcular tamaño de Param Segment si existen parámetros -p
+    if (cantParams > 0)
+    {
+        int bytesStrings = 0;
+        for (int i = 0; i < cantParams; i++)
+            bytesStrings += strlen(argvParams[i]) + 1; // incluye '\0'
+
+        int bytesPunteros = cantParams * 4; // arreglo argv de punteros de 4 bytes
+        hdr->tamPS = bytesStrings + bytesPunteros;
+    }
+    else
+    {
+        hdr->tamPS = 0;
+    }
+
+    // validar si la memoria alcanza
+    int totalProceso = hdr->tamPS + hdr->tamKS + hdr->tamCS + hdr->tamDS + hdr->tamES + hdr->tamSS;
+    if (ver == 1)
+    {
+        totalProceso = hdr->tamCS; // En v1, DS ocupa el resto de la memoria disponible
+    }
+
+    if (totalProceso > tamMemoriaBytes)
+    {
+        printf("[ERROR] Memoria insuficiente para alojar el proceso (%d bytes requeridos, %d disponibles)\n",
+               totalProceso, tamMemoriaBytes);
+        fclose(arch);
+        exit(1);
+    }
+
+    // cargar contenidos en memoria
+    int baseFisicaPS = 0;
+    int baseFisicaKS = baseFisicaPS + hdr->tamPS;
+    int baseFisicaCS = baseFisicaKS + hdr->tamKS;
+
+    // cargar Param Segment
+    if (hdr->tamPS > 0)
+    {
+        int offsetStr = 0;
+        int offsetArrayArgv = 0;
+        for (int i = 0; i < cantParams; i++)
+            offsetArrayArgv += strlen(argvParams[i]) + 1;
+
+        for (int i = 0; i < cantParams; i++)
+        {
+            int len = strlen(argvParams[i]) + 1;
+            for (int k = 0; k < len; k++)
+            {
+                (*memoria)[baseFisicaPS + offsetStr + k] = argvParams[i][k];
+            }
+            // escribir puntero en el arreglo argv (segmento 0, offset del string)
+            int dirLogicaStr = (0 << 16) | (offsetStr & 0xFFFF);
+            int posPtr = baseFisicaPS + offsetArrayArgv + (i * 4);
+            (*memoria)[posPtr + 0] = (dirLogicaStr >> 24) & 0xFF;
+            (*memoria)[posPtr + 1] = (dirLogicaStr >> 16) & 0xFF;
+            (*memoria)[posPtr + 2] = (dirLogicaStr >> 8) & 0xFF;
+            (*memoria)[posPtr + 3] = dirLogicaStr & 0xFF;
+
+            offsetStr += len;
+        }
+    }
+
+    // en v2: primero viene el CS y luego KS en el archivo
+    if (ver == 2)
+    {
+        if (hdr->tamCS > 0)
+            fread(&(*memoria)[baseFisicaCS], 1, hdr->tamCS, arch);
+        if (hdr->tamKS > 0)
+            fread(&(*memoria)[baseFisicaKS], 1, hdr->tamKS, arch);
+    }
+    else // en v1: solo CS
+    {
+        fread(&(*memoria)[0], 1, hdr->tamCS, arch);
+    }
+
+    fclose(arch);
+    return 0;
+}
+
+void ConstruirTablaSegmentos(HeaderVM *hdr, Segmento TablaSegmentos[], int Registros[], int tamMemoriaBytes)
+{
+    Registros[26] = -1; // CS
+    Registros[27] = -1; // DS
+    Registros[28] = -1; // ES
+    Registros[29] = -1; // SS
+    Registros[30] = -1; // KS
+    Registros[31] = -1; // PS
+
+    for (int i = 0; i < 8; i++)
+    {
+        TablaSegmentos[i].base = -1;
+        TablaSegmentos[i].size = -1;
+    }
+
+    if (hdr->version == 1)
+    {
+        TablaSegmentos[0].base = 0;
+        TablaSegmentos[0].size = hdr->tamCS;
+
+        TablaSegmentos[1].base = hdr->tamCS;
+        TablaSegmentos[1].size = tamMemoriaBytes - hdr->tamCS;
+
+        Registros[26] = 0 << 16;      // CS
+        Registros[27] = 1 << 16;      // DS
+        Registros[0] = Registros[26]; // IP = CS:0
+        return;
+    }
+
+    // v2: orden fisico PS -> KS -> CS -> DS -> ES -> SS
+    int entradaTabla = 0;
+    int baseActual = 0;
+
+    if (hdr->tamPS > 0)
+    {
+        TablaSegmentos[entradaTabla].base = baseActual;
+        TablaSegmentos[entradaTabla].size = hdr->tamPS;
+        Registros[31] = (entradaTabla << 16); // PS
+        baseActual += hdr->tamPS;
+        entradaTabla++;
+    }
+
+    if (hdr->tamKS > 0)
+    {
+        TablaSegmentos[entradaTabla].base = baseActual;
+        TablaSegmentos[entradaTabla].size = hdr->tamKS;
+        Registros[30] = (entradaTabla << 16); // KS
+        baseActual += hdr->tamKS;
+        entradaTabla++;
+    }
+
+    if (hdr->tamCS > 0)
+    {
+        TablaSegmentos[entradaTabla].base = baseActual;
+        TablaSegmentos[entradaTabla].size = hdr->tamCS;
+        Registros[26] = (entradaTabla << 16); // CS
+        baseActual += hdr->tamCS;
+        entradaTabla++;
+    }
+
+    if (hdr->tamDS > 0)
+    {
+        TablaSegmentos[entradaTabla].base = baseActual;
+        TablaSegmentos[entradaTabla].size = hdr->tamDS;
+        Registros[27] = (entradaTabla << 16); // DS
+        baseActual += hdr->tamDS;
+        entradaTabla++;
+    }
+
+    if (hdr->tamES > 0)
+    {
+        TablaSegmentos[entradaTabla].base = baseActual;
+        TablaSegmentos[entradaTabla].size = hdr->tamES;
+        Registros[28] = (entradaTabla << 16); // ES
+        baseActual += hdr->tamES;
+        entradaTabla++;
+    }
+
+    if (hdr->tamSS > 0)
+    {
+        TablaSegmentos[entradaTabla].base = baseActual;
+        TablaSegmentos[entradaTabla].size = hdr->tamSS;
+        Registros[29] = (entradaTabla << 16); // SS
+        baseActual += hdr->tamSS;
+        entradaTabla++;
+    }
+
+    // inicializar IP con el CS y el offset del entry point
+    Registros[0] = (Registros[26] & 0xFFFF0000) | (hdr->entryPoint & 0xFFFF);
 }
 
 void MostrarBinario(char byte)
@@ -133,7 +324,7 @@ void MostrarBinario(char byte)
     }
 }
 
-void MostrarCodigo(unsigned char MemoriaPrincipal[16384], char *cabecera, uint16_t LargoCod) // ya que tenemos LargoCod no es necesario volver a calcularlo
+void MostrarCodigo(unsigned char *MemoriaPrincipal, char *cabecera, uint16_t LargoCod)
 {
     int i = 0, j = 0, cant;
     char codOperacion, OperandoA, OperandoB, valorOPA[3] = {0}, valorOPB[3] = {0};
@@ -264,25 +455,6 @@ void MostrarCodigo(unsigned char MemoriaPrincipal[16384], char *cabecera, uint16
     }
 }
 
-void AsignarSegmentos(int LargoCod, Segmento TablaSegmentos[], int Registros[])
-{
-
-    TablaSegmentos[0].base = 0;
-    TablaSegmentos[0].size = LargoCod;
-
-    TablaSegmentos[1].base = LargoCod;
-    TablaSegmentos[1].size = 16384 - LargoCod;
-
-    for (int i = 2; i < 8; i++) // Los que no se utilizan -1
-    {
-        TablaSegmentos[i].base = -1;
-        TablaSegmentos[i].size = -1;
-    }
-
-    Registros[26] = 0 << 16; // CS seg 0 offset 0
-    Registros[27] = 1 << 16; // DS seg 1 offset 0
-}
-
 void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[], int Registros[])
 {
     char codOperacion, operandoA, operandoB;
@@ -387,45 +559,118 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
 
 int main(int argc, char *argv[])
 {
+    char *filenameVMX = NULL;
+    char *filenameVMI = NULL;
+    int tamMemoriaKiB = 16; // Por defecto 16 KiB
+    int mostrar_disassembler = 0;
 
-    int Registros[32] = {0};               // Int ya ocupa 4bytes
-    unsigned char MemoriaPrincipal[16384]; // La ram es unidimensional un byte tras otro
-    Segmento TablaSegmentos[8];            // 0 cs, 1 ds,
-    uint16_t LargoCod;
-    char cabecera[6];
+    char *params[64];
+    int cantParams = 0;
 
-    const char *filename;
-    // argv[0] = nombre del propio programa (ej: "./vmx"), siempre est�
-    // argv[1] = filename.vmx (obligatorio)
-    // argv[2] = "-d" (opcional)
-    // hay q compilar el maquina antes de usarla asi esta la ultima version
-    // en mi mac es         chmod +x vmx        gcc MV0.c -o vmx    ./vmx prueba1.vmx -d
-    if (argc < 2)
+    // 1. parsear los argumentos de la linea de comandos
+    for (int i = 1; i < argc; i++)
     {
-        printf("Uso: vmx filename.vmx [-d]\n");
-    }
-    else
-    {
-        char *filename = argv[1];
-        int mostrar_disassembler = 0;
-
-        if (argc >= 3 && strcmp(argv[2], "-d") == 0)
+        if (strcmp(argv[i], "-d") == 0)
         {
             mostrar_disassembler = 1;
         }
+        else if (strncmp(argv[i], "m=", 2) == 0)
+        {
+            tamMemoriaKiB = atoi(argv[i] + 2);
+            if (tamMemoriaKiB <= 0)
+                tamMemoriaKiB = 16;
+        }
+        else if (strcmp(argv[i], "-p") == 0)
+        {
+            if (filenameVMX != NULL)
+            {
+                params[cantParams++] = filenameVMX;
+            }
 
-        printf("Archivo a ejecutar: %s\n", filename);
-        printf("Modo disassembler: %s\n", mostrar_disassembler ? "SI" : "NO");
+            for (int j = i + 1; j < argc; j++)
+            {
+                params[cantParams++] = argv[j];
+            }
 
-        // Aca seguiria: abrir el archivo, leer la cabecera, cargar en memoria,
-        // ejecutar (y si mostrar_disassembler, imprimir el disassembler)
-        Lectura(MemoriaPrincipal, filename, cabecera, &LargoCod);
-        AsignarSegmentos(LargoCod, TablaSegmentos, Registros);
-
-        if (mostrar_disassembler)
-            MostrarCodigo(MemoriaPrincipal, cabecera, LargoCod);
-        EjecutarMaquina(MemoriaPrincipal, TablaSegmentos, Registros);
+            break; // -p siempre va al final
+        }
+        else
+        {
+            // puede ser archivo .vmx o .vmi
+            int len = strlen(argv[i]);
+            if (len > 4 && strcasecmp(argv[i] + len - 4, ".vmx") == 0)
+            {
+                filenameVMX = argv[i];
+            }
+            else if (len > 4 && strcasecmp(argv[i] + len - 4, ".vmi") == 0)
+            {
+                filenameVMI = argv[i];
+            }
+        }
     }
 
+    if (cantParams > 0 && params[0] != filenameVMX && filenameVMX != NULL)
+    {
+        // desplazamos los elementos para ubicar filenameVMX en params[0]
+        for (int k = cantParams; k > 0; k--)
+        {
+            params[k] = params[k - 1];
+        }
+        params[0] = filenameVMX;
+        cantParams++;
+    }
+
+    if (!filenameVMX && !filenameVMI)
+    {
+        printf("Uso: vmx [filename.vmx] [filename.vmi] [m=M] [-d] [-p param1 param2 ...]\n");
+        return 1;
+    }
+
+    // si no hay .vmx, se ignoran los parámetros -p
+    if (!filenameVMX)
+    {
+        cantParams = 0;
+    }
+
+    // 2. reserva de memoria dinámica
+    int tamMemoriaBytes = tamMemoriaKiB * 1024;
+    unsigned char *MemoriaPrincipal = (unsigned char *)malloc(tamMemoriaBytes * sizeof(unsigned char));
+
+    if (!MemoriaPrincipal)
+    {
+        printf("[ERROR] No se pudo asignar memoria principal de %d KiB\n", tamMemoriaKiB);
+        return 1;
+    }
+
+    for (int i = 0; i < tamMemoriaBytes; i++)
+    {
+        MemoriaPrincipal[i] = 0;
+    }
+
+    int Registros[32] = {0};
+    Segmento TablaSegmentos[8];
+    HeaderVM hdr = {0};
+
+    // 3. carga del proceso
+    if (filenameVMX)
+    {
+        printf("Archivo a ejecutar: %s\n", filenameVMX);
+        printf("Memoria asignada: %d KiB (%d bytes)\n", tamMemoriaKiB, tamMemoriaBytes);
+        printf("Modo disassembler: %s\n", mostrar_disassembler ? "SI" : "NO");
+
+        CargarProgramaVMX(filenameVMX, &MemoriaPrincipal, tamMemoriaBytes, &hdr, params, cantParams);
+        ConstruirTablaSegmentos(&hdr, TablaSegmentos, Registros, tamMemoriaBytes);
+
+        // (etapa 2): inicializar Pila (SP, RET -1, argc, argv)
+    }
+    else if (filenameVMI)
+    {
+        // (Etapa 5): cargar imagen .vmi directamente
+    }
+
+    EjecutarMaquina(MemoriaPrincipal, TablaSegmentos, Registros);
+
+    // Liberar memoria
+    free(MemoriaPrincipal);
     return 0;
 }

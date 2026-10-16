@@ -150,25 +150,15 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
 
             Registros[6] = dato; // MBR
 
-            // Si es un número (no caracter) y tamBytes < 4, limpiamos la celda de 4 bytes
-            if (!(modo & 0x02))
-            {
-                for (int k = 0; k < 4; k++)
-                    MemoriaPrincipal[dirFisica + k] = 0;
-            }
-
-            // escribimos el dato alineado al final de la celda de 4 bytes si es numero
-            int alineacion = (!(modo & 0x02) && tamBytes < 4) ? (4 - tamBytes) : 0;
             for (int j = 0; j < tamBytes; j++)
-                MemoriaPrincipal[dirFisica + alineacion + j] = (dato >> (8 * (tamBytes - 1 - j))) & 0xFF;
+                MemoriaPrincipal[dirFisica + j] = (dato >> (8 * (tamBytes - 1 - j))) & 0xFF;
         }
         else if (subcodigo == 2) // WRITE
         {
             int valor = 0;
-            int alineacion = (!(modo & 0x02) && tamBytes < 4) ? (4 - tamBytes) : 0;
 
             for (int j = 0; j < tamBytes; j++)
-                valor = (valor << 8) | (unsigned char)MemoriaPrincipal[dirFisica + alineacion + j];
+                valor = (valor << 8) | (unsigned char)MemoriaPrincipal[dirFisica + j];
 
             Registros[6] = valor; // MBR
 
