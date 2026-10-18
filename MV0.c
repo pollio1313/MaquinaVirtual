@@ -96,7 +96,7 @@ const char *tablaRegistros[32] = {
     "Programa"   // 31
 };
 
-// Lee dos bytes en formato Big-Endian
+// lee dos bytes en formato Big-Endian
 static uint16_t LeerWordBE(FILE *arch)
 {
     unsigned char b[2];
