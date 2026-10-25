@@ -467,82 +467,79 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
 
 
     // Registros[0] = Registros[26]; // IP se inicia aputando a la primera instruccion del codigo, mismo valor que CS
-    /*Esta línea pone el IP en el comienzo de CS (offset 0) cada vez que se llama a EjecutarMaquina. Eso rompe dos cosas:
-
-    El entry point. En MV2 ConstruirTablaSegmentos ya deja el IP en CS : entryPoint, y esta línea lo pisaba.
-    Aunque nunca usaras .vmi, el programa arrancaría siempre en la primera instrucción en lugar de en main.
-    Retomar desde una imagen. Al cargar un .vmi, el IP viene dentro de los registros guardados.
-    Si la función lo resetea, siempre arrancás desde el principio y la imagen no sirve para continuar.*/
+    // el IP ya viene inicializado (entry point o imagen), por eso la comenté
    
    
     while ((Registros[0] & 0xFFFF) < tamCS)     //cambie el while a una ver mas simple aprovechando las 4 var que agregué arriba
     { // Se itera hasta que IP apunte fuera del limite del segmento de codigo
         pos = Registros[0] & 0xFFFF;
-        codOperacion = Registros[1] = MemoriaPrincipal[pos] & 0x1F; // decodifico y guardo el codigo limpio en OPC
+        codOperacion = Registros[1] = codigo[pos] & 0x1F; // decodifico y guardo el codigo limpio en OPC
         cantOP = tablaInstrucciones[codOperacion].cantOP;
+
         if (cantOP == 0)
         {
             Registros[2] = Registros[3] = 0;
         }
+
         if (cantOP == 1)
         {
-            operandoA = (MemoriaPrincipal[pos] >> 6) & 0x03;
+            operandoA = (codigo[pos] >> 6) & 0x03;
             Registros[2] = operandoA << 24; // guardamos OP A en OP1 son de 32 bits
 
             if (operandoA == 1)
             {
-                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | codigo[++pos];
             }
             else if (operandoA == 2)
             {
-                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
-                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | (codigo[++pos] << 8);
+                Registros[2] = Registros[2] | codigo[++pos];
             }
             else if (operandoA == 3)
             {
-                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 16);
-                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
-                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | (codigo[++pos] << 16);
+                Registros[2] = Registros[2] | (codigo[++pos] << 8);
+                Registros[2] = Registros[2] | codigo[++pos];
             }
         }
 
         if (cantOP == 2)
         {
-            operandoB = (MemoriaPrincipal[pos] >> 6) & 0x03;
-            operandoA = (MemoriaPrincipal[pos] >> 4) & 0x03;
+            operandoB = (codigo[pos] >> 6) & 0x03;
+            operandoA = (codigo[pos] >> 4) & 0x03;
             Registros[2] = operandoA << 24; // A en OP1
             Registros[3] = operandoB << 24; // B en OP2
 
             if (operandoB == 1)
             {
-                Registros[3] = Registros[3] | (unsigned char)MemoriaPrincipal[++pos];
+                Registros[3] = Registros[3] | codigo[++pos];
             }
             else if (operandoB == 2)
             {
-                Registros[3] = Registros[3] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
-                Registros[3] = Registros[3] | (unsigned char)MemoriaPrincipal[++pos];
+                Registros[3] = Registros[3] | (codigo[++pos] << 8);
+                Registros[3] = Registros[3] | codigo[++pos];
             }
             else if (operandoB == 3)
             {
-                Registros[3] = Registros[3] | ((unsigned char)MemoriaPrincipal[++pos] << 16);
-                Registros[3] = Registros[3] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
-                Registros[3] = Registros[3] | (unsigned char)MemoriaPrincipal[++pos];
+                Registros[3] = Registros[3] | (codigo[++pos] << 16);
+                Registros[3] = Registros[3] | (codigo[++pos] << 8);
+                Registros[3] = Registros[3] | codigo[++pos];
             }
 
             if (operandoA == 1)
             {
-                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | codigo[++pos];
             }
             else if (operandoA == 2)
             {
-                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
-                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | (codigo[++pos] << 8);
+                Registros[2] = Registros[2] | codigo[++pos];
             }
             else if (operandoA == 3)
             {
-                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 16);
-                Registros[2] = Registros[2] | ((unsigned char)MemoriaPrincipal[++pos] << 8);
-                Registros[2] = Registros[2] | (unsigned char)MemoriaPrincipal[++pos];
+                Registros[2] = Registros[2] | (codigo[++pos] << 16);
+                Registros[2] = Registros[2] | (codigo[++pos] << 8);
+                Registros[2] = Registros[2] | codigo[++pos];
             }
         }
 
