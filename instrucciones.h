@@ -38,7 +38,6 @@ void op_JN(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegm
 void op_JZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_JC(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_JV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-void NewFunction(int  Registros[], int valorA);
 void op_JNP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_JNN(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_JNZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);

@@ -448,49 +448,49 @@ void op_JC(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegm
     if ((Registros[17] >> 29) & 1) // esta prendido C?
         Registros[0] = valorA;     // IP a valorA
 }
+
 void op_JMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    Registros[0] = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
+    SaltarA(Registros, ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos));
 }
+
 void op_JN(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     if ((Registros[17] >> 31) & 1) // esta prendido N?
-        Registros[0] = valorA;
+        SaltarA(Registros, valorA);
 }
+
 void op_JNP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     if (((Registros[17] >> 31) & 1) || ((Registros[17] >> 30) & 1)) // esta prendido N y Z?
-        Registros[0] = valorA;
+        SaltarA(Registros, valorA);
 }
+
 void op_JNN(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     if (!((Registros[17] >> 31) & 1))
-        Registros[0] = valorA;
+        SaltarA(Registros, valorA);
 }
 void op_JNZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     if (!((Registros[17] >> 30) & 1))
-        Registros[0] = valorA;
+        SaltarA(Registros, valorA);
 }
 void op_JP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     if (!((Registros[17] >> 31) & 1) && !((Registros[17] >> 30) & 1))
-        Registros[0] = valorA;
+        SaltarA(Registros, valorA);
 }
 void op_JV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     if ((Registros[17] >> 28) & 1)
-        NewFunction(Registros, valorA);
-}
-void NewFunction(int  Registros[], int valorA)
-{
-Registros[0] = valorA;
+        SaltarA(Registros, valorA);
 }
 void op_JZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
