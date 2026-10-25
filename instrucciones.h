@@ -1,4 +1,7 @@
 #include <stdint.h>
+#ifndef INSTRUCCIONES_H
+#define INSTRUCCIONES_H
+
 // estructura para almacenar los tamaños obtenidos de la cabecera
 typedef struct
 {
@@ -35,6 +38,7 @@ void op_JN(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegm
 void op_JZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_JC(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_JV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void NewFunction(int  Registros[], int valorA);
 void op_JNP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_JNN(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_JNZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
@@ -53,3 +57,5 @@ void op_SAR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
 void op_LDL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_LDH(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_RND(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+
+#endif // INSTRUCCIONES_H

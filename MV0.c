@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
-
+#include "imagen.h"
 #include "instrucciones.h"
 
 struct operando
@@ -459,9 +459,23 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
 {
     char codOperacion, operandoA, operandoB;
     int pos, cantOP;
-    Registros[0] = Registros[26]; // IP se inicia aputando a la primera instruccion del codigo, mismo valor que CS
 
-    while ((Registros[0] & 0xFFFF) >= 0 && (Registros[0] & 0xFFFF) < TablaSegmentos[0].size)
+    int segCS = (Registros[26] >> 16) & 0xFFFF;     //antes tomaba al cs en la pos 0 de la tabla de seg
+    int baseCS = TablaSegmentos[segCS].base;
+    int tamCS = TablaSegmentos[segCS].size;
+    unsigned char *codigo = MemoriaPrincipal + baseCS;
+
+
+    // Registros[0] = Registros[26]; // IP se inicia aputando a la primera instruccion del codigo, mismo valor que CS
+    /*Esta línea pone el IP en el comienzo de CS (offset 0) cada vez que se llama a EjecutarMaquina. Eso rompe dos cosas:
+
+    El entry point. En MV2 ConstruirTablaSegmentos ya deja el IP en CS : entryPoint, y esta línea lo pisaba.
+    Aunque nunca usaras .vmi, el programa arrancaría siempre en la primera instrucción en lugar de en main.
+    Retomar desde una imagen. Al cargar un .vmi, el IP viene dentro de los registros guardados.
+    Si la función lo resetea, siempre arrancás desde el principio y la imagen no sirve para continuar.*/
+   
+   
+    while ((Registros[0] & 0xFFFF) < tamCS)     //cambie el while a una ver mas simple aprovechando las 4 var que agregué arriba
     { // Se itera hasta que IP apunte fuera del limite del segmento de codigo
         pos = Registros[0] & 0xFFFF;
         codOperacion = Registros[1] = MemoriaPrincipal[pos] & 0x1F; // decodifico y guardo el codigo limpio en OPC
@@ -532,28 +546,41 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
             }
         }
 
+        Registros[0] = (Registros[0] & 0xFFFF0000) | ((pos + 1) & 0xFFFF); // IP -> siguiente instruccion
+        /*En ese punto pos apunta al último byte de la instrucción (los ++pos fueron consumiendo los operandos), así que 
+        pos + 1 es el offset de la siguiente. La línea conserva los 16 bits altos (el segmento) y reemplaza los bajos. 
+        Tres razones para hacerlo antes y no después, como estaba:
+
+        La imagen. SYS 0xF guarda los registros dentro de op_SYS, o sea, durante la ejecución. 
+        Si el IP todavía apunta al SYS, al retomar desde el .vmi vuelve a ejecutar el mismo breakpoint, y así indefinidamente.
+
+        CALL. El TP dice que al ejecutarse, el IP “ya se encuentra apuntando a la siguiente instrucción”, 
+        porque eso es lo que se apila como dirección de retorno.
+        
+        Un bug latente del esquema anterior. 
+        Detectabas el salto con if (Registros[0] == ipPrevio). 
+        Un salto cuyo destino sea la propia instrucción (un JMP a sí mismo, por ejemplo) se confundía con “no hubo salto” y el IP avanzaba igual. 
+        Ahora los saltos simplemente pisan el IP ya avanzado y no hace falta comparar nada, por eso desaparece ipPrevio.*/
+
         if (codOperacion < 0 || codOperacion > 0x1F || tablaInstrucciones[codOperacion].ejecutar == NULL)
         {
             printf("\n[ERROR] Instruccion invalida: 0x%02X en IP [%04X]\n", (unsigned char)codOperacion, pos);
             exit(1);
         }
+        // aca elimine un else  -Simon(capo)
+
         // ejecucion
-        int ipPrevio = Registros[0];
-        if (tablaInstrucciones[codOperacion].ejecutar != NULL)
-        {
-            tablaInstrucciones[codOperacion].ejecutar(MemoriaPrincipal, Registros, TablaSegmentos);
-        }
-        else
-        {
-            printf("Error: Codigo de operacion invalido: %02X\n", codOperacion);
-            codOperacion = 0x0F;
-            Registros[0] = -1; // forzamos la detencion de la maquina
-        }
-        if (codOperacion == 0x0F)
+        gBreakpointEjecutado = 0;
+        tablaInstrucciones[codOperacion].ejecutar(MemoriaPrincipal, Registros, TablaSegmentos);
+
+        if (codOperacion == 0x0F) // STOP
             break;
-        // avanzamos el ip si no fue STOP
-        if (Registros[0] == ipPrevio)
-            Registros[0] = (Registros[0] & 0xFFFF0000) | ((pos + 1) & 0xFFFF);
+
+        if (gPasoAPaso && !gBreakpointEjecutado) // modo paso a paso
+            Breakpoint(MemoriaPrincipal, Registros, TablaSegmentos);
+        
+        /*Sacar el else. Ya está validado más arriba: si ejecutar fuera NULL, el programa aborta con “Instruccion invalida”. 
+        Ese else nunca se alcanzaba.*/
     }
 }
 
@@ -667,6 +694,9 @@ int main(int argc, char *argv[])
     {
         // (Etapa 5): cargar imagen .vmi directamente
     }
+
+    gArchivoVMI = filenameVMI;
+    gTamMemoriaBytes = tamMemoriaBytes;
 
     EjecutarMaquina(MemoriaPrincipal, TablaSegmentos, Registros);
 

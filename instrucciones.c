@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "instrucciones.h"
+#include "imagen.h"
 #include <limits.h>
 
 // tres funciones auxiliares
@@ -86,14 +87,26 @@ void ImprimirBinario(int valor, int tamByte)
         printf("%d", (valor >> i) & 1);
 }
 
+static void SaltarA(int Registros[], int destino)
+{
+    Registros[0] = (Registros[26] & 0xFFFF0000) | (destino & 0xFFFF);
+}
+
 // todas las operaciones desarrolladas
 void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    int subcodigo = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     int modo = Registros[10];                      // EAX formato
     int cantCeldas = Registros[12] & 0xFFFF;       // ECX bajo cantidad
     int tamBytes = (Registros[12] >> 16) & 0xFFFF; // ECX alto tamaño bytes
     int dirLogica = Registros[13];                 // EDX puntero de inicio
+
+    int subcodigo = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
+
+    if (subcodigo == 0xF)
+    {
+        Breakpoint(MemoriaPrincipal, Registros, TablaSegmentos);
+        return;
+    }
 
     if (tamBytes <= 0)
         tamBytes = 4; // por defecto 4 bytes
@@ -473,13 +486,17 @@ void op_JV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegm
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     if ((Registros[17] >> 28) & 1)
-        Registros[0] = valorA;
+        NewFunction(Registros, valorA);
+}
+void NewFunction(int  Registros[], int valorA)
+{
+Registros[0] = valorA;
 }
 void op_JZ(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     if ((Registros[17] >> 30) & 1)
-        Registros[0] = valorA;
+        SaltarA(Registros, valorA);
 }
 
 void op_LDH(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
