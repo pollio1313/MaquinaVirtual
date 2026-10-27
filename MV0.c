@@ -38,10 +38,10 @@ const struct Instruccion tablaInstrucciones[] = {
     {"JNN", 0x08, 1, op_JNN},
     {"JNZ", 0x09, 1, op_JNZ},
     {"NOT", 0x0A, 1, op_NOT},
-    {"---", 0x0B, 0, NULL},
-    {"---", 0x0C, 0, NULL},
-    {"---", 0x0D, 0, NULL},
-    {"---", 0x0E, 0, NULL},
+    {"PUSH", 0x0B, 1, op_PUSH},
+    {"POP", 0x0C, 1, op_POP},
+    {"CALL", 0x0D, 1, op_CALL},
+    {"RET", 0x0E, 0, op_RET},
     {"STOP", 0x0F, 0, op_STOP},
     {"MOV", 0x10, 2, op_MOV},
     {"ADD", 0x11, 2, op_ADD},
@@ -460,18 +460,16 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
     char codOperacion, operandoA, operandoB;
     int pos, cantOP;
 
-    int segCS = (Registros[26] >> 16) & 0xFFFF;     //antes tomaba al cs en la pos 0 de la tabla de seg
+    int segCS = (Registros[26] >> 16) & 0xFFFF; // antes tomaba al cs en la pos 0 de la tabla de seg
     int baseCS = TablaSegmentos[segCS].base;
     int tamCS = TablaSegmentos[segCS].size;
     unsigned char *codigo = MemoriaPrincipal + baseCS;
 
-
     // Registros[0] = Registros[26]; // IP se inicia aputando a la primera instruccion del codigo, mismo valor que CS
     // el IP ya viene inicializado (entry point o imagen), por eso la comenté
-   
-   
-    while ((Registros[0] & 0xFFFF) < tamCS)     //cambie el while a una ver mas simple aprovechando las 4 var que agregué arriba
-    { // Se itera hasta que IP apunte fuera del limite del segmento de codigo
+
+    while ((Registros[0] & 0xFFFF) < tamCS) // cambie el while a una ver mas simple aprovechando las 4 var que agregué arriba
+    {                                       // Se itera hasta que IP apunte fuera del limite del segmento de codigo
         pos = Registros[0] & 0xFFFF;
         codOperacion = Registros[1] = codigo[pos] & 0x1F; // decodifico y guardo el codigo limpio en OPC
         cantOP = tablaInstrucciones[codOperacion].cantOP;
@@ -544,19 +542,19 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
         }
 
         Registros[0] = (Registros[0] & 0xFFFF0000) | ((pos + 1) & 0xFFFF); // IP -> siguiente instruccion
-        /*En ese punto pos apunta al último byte de la instrucción (los ++pos fueron consumiendo los operandos), así que 
-        pos + 1 es el offset de la siguiente. La línea conserva los 16 bits altos (el segmento) y reemplaza los bajos. 
+        /*En ese punto pos apunta al último byte de la instrucción (los ++pos fueron consumiendo los operandos), así que
+        pos + 1 es el offset de la siguiente. La línea conserva los 16 bits altos (el segmento) y reemplaza los bajos.
         Tres razones para hacerlo antes y no después, como estaba:
 
-        La imagen. SYS 0xF guarda los registros dentro de op_SYS, o sea, durante la ejecución. 
+        La imagen. SYS 0xF guarda los registros dentro de op_SYS, o sea, durante la ejecución.
         Si el IP todavía apunta al SYS, al retomar desde el .vmi vuelve a ejecutar el mismo breakpoint, y así indefinidamente.
 
-        CALL. El TP dice que al ejecutarse, el IP “ya se encuentra apuntando a la siguiente instrucción”, 
+        CALL. El TP dice que al ejecutarse, el IP “ya se encuentra apuntando a la siguiente instrucción”,
         porque eso es lo que se apila como dirección de retorno.
-        
-        Un bug latente del esquema anterior. 
-        Detectabas el salto con if (Registros[0] == ipPrevio). 
-        Un salto cuyo destino sea la propia instrucción (un JMP a sí mismo, por ejemplo) se confundía con “no hubo salto” y el IP avanzaba igual. 
+
+        Un bug latente del esquema anterior.
+        Detectabas el salto con if (Registros[0] == ipPrevio).
+        Un salto cuyo destino sea la propia instrucción (un JMP a sí mismo, por ejemplo) se confundía con “no hubo salto” y el IP avanzaba igual.
         Ahora los saltos simplemente pisan el IP ya avanzado y no hace falta comparar nada, por eso desaparece ipPrevio.*/
 
         if (codOperacion < 0 || codOperacion > 0x1F || tablaInstrucciones[codOperacion].ejecutar == NULL)
@@ -575,8 +573,8 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
 
         if (gPasoAPaso && !gBreakpointEjecutado) // modo paso a paso
             Breakpoint(MemoriaPrincipal, Registros, TablaSegmentos);
-        
-        /*Sacar el else. Ya está validado más arriba: si ejecutar fuera NULL, el programa aborta con “Instruccion invalida”. 
+
+        /*Sacar el else. Ya está validado más arriba: si ejecutar fuera NULL, el programa aborta con “Instruccion invalida”.
         Ese else nunca se alcanzaba.*/
     }
 }
@@ -591,7 +589,7 @@ int main(int argc, char *argv[])
     char *params[64];
     int cantParams = 0;
 
-    // 1. parsear los argumentos de la linea de comandos
+    // parsear los argumentos de la linea de comandos
     for (int i = 1; i < argc; i++)
     {
         if (strcmp(argv[i], "-d") == 0)
@@ -656,7 +654,7 @@ int main(int argc, char *argv[])
         cantParams = 0;
     }
 
-    // 2. reserva de memoria dinámica
+    // reserva de memoria dinámica
     int tamMemoriaBytes = tamMemoriaKiB * 1024;
     unsigned char *MemoriaPrincipal = (unsigned char *)malloc(tamMemoriaBytes * sizeof(unsigned char));
 
@@ -675,7 +673,7 @@ int main(int argc, char *argv[])
     Segmento TablaSegmentos[8];
     HeaderVM hdr = {0};
 
-    // 3. carga del proceso
+    // carga del proceso
     if (filenameVMX)
     {
         printf("Archivo a ejecutar: %s\n", filenameVMX);
@@ -686,6 +684,53 @@ int main(int argc, char *argv[])
         ConstruirTablaSegmentos(&hdr, TablaSegmentos, Registros, tamMemoriaBytes);
 
         // (etapa 2): inicializar Pila (SP, RET -1, argc, argv)
+        if (hdr.version == 2 && hdr.tamSS > 0)
+        {
+            int segSS = (Registros[29] >> 16) & 0xFFFF;
+            int baseSS = TablaSegmentos[segSS].base;
+            int tamSS = TablaSegmentos[segSS].size;
+
+            // SP arranca apuntando fuera del Stack Segment (pila vacia)
+            Registros[7] = baseSS + tamSS;
+
+            // calcular puntero a *argv en Param Segment
+            int ptrArgv = -1; // 0xFFFFFFFF por defecto si no hay params
+            if (cantParams > 0 && hdr.tamPS > 0)
+            {
+                int bytesStrings = 0;
+                for (int p = 0; p < cantParams; p++)
+                    bytesStrings += strlen(params[p]) + 1;
+
+                // el arreglo argv se ubica inmediatamente despues de las cadenas en el segmento 0
+                ptrArgv = (0 << 16) | (bytesStrings & 0xFFFF);
+            }
+
+            int argcVal = cantParams;
+
+            // apilar *argv
+            Registros[7] -= 4;
+            int dir = Registros[7];
+            MemoriaPrincipal[dir + 0] = (ptrArgv >> 24) & 0xFF;
+            MemoriaPrincipal[dir + 1] = (ptrArgv >> 16) & 0xFF;
+            MemoriaPrincipal[dir + 2] = (ptrArgv >> 8) & 0xFF;
+            MemoriaPrincipal[dir + 3] = ptrArgv & 0xFF;
+
+            // apilar argc
+            Registros[7] -= 4;
+            dir = Registros[7];
+            MemoriaPrincipal[dir + 0] = (argcVal >> 24) & 0xFF;
+            MemoriaPrincipal[dir + 1] = (argcVal >> 16) & 0xFF;
+            MemoriaPrincipal[dir + 2] = (argcVal >> 8) & 0xFF;
+            MemoriaPrincipal[dir + 3] = argcVal & 0xFF;
+
+            // apilar RET (-1 = 0xFFFFFFFF)
+            Registros[7] -= 4;
+            dir = Registros[7];
+            MemoriaPrincipal[dir + 0] = 0xFF;
+            MemoriaPrincipal[dir + 1] = 0xFF;
+            MemoriaPrincipal[dir + 2] = 0xFF;
+            MemoriaPrincipal[dir + 3] = 0xFF;
+        }
     }
     else if (filenameVMI)
     {
@@ -697,7 +742,7 @@ int main(int argc, char *argv[])
 
     EjecutarMaquina(MemoriaPrincipal, TablaSegmentos, Registros);
 
-    // Liberar memoria
+    // liberar memoria
     free(MemoriaPrincipal);
     return 0;
 }

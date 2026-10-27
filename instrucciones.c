@@ -6,77 +6,155 @@
 
 // tres funciones auxiliares
 
-int CalcularDireccionFisica(int operandoMemoria, unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+int CalcularDireccionFisica(int operandoMemoria, unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[], int tamLecturaEscritura)
 {
-    short offset = (short)((operandoMemoria >> 8) & 0xFFFF); // Offset de 16 bits podria ser short o int16_t
-    int codReg = operandoMemoria & 0x1F;                     // codigo registro 5 bits
+    short offset = (short)((operandoMemoria >> 8) & 0xFFFF);
+    int codReg = operandoMemoria & 0x1F;
     int numSeg = (Registros[codReg] >> 16) & 0xFFFF;
     int offsetFinal = (Registros[codReg] & 0xFFFF) + offset;
-    // printf("\n %d %d", TablaSegmentos[numSeg].size, TablaSegmentos[numSeg].base);
-    // validar segmento
+
+    // validar existencia de segmento
     if (numSeg < 0 || numSeg >= 8 || TablaSegmentos[numSeg].size == 0xFFFF || (short)TablaSegmentos[numSeg].base == -1)
     {
-        printf("\n [ERROR] Segmento invalido %d\n", numSeg);
-        exit(1); // 4095
+        printf("\n[ERROR] Segmento invalido %d\n", numSeg);
+        exit(1);
     }
-    // validar limite que no se pase o se caiga
-    if (offsetFinal < 0 || (offsetFinal + 4) > TablaSegmentos[numSeg].size)
+    // validar limite respetando la cantidad de bytes a leer/escribir
+    if (offsetFinal < 0 || (offsetFinal + tamLecturaEscritura) > TablaSegmentos[numSeg].size)
     {
         printf("\n[ERROR] Fuera del limite de segmento.\n");
         exit(1);
     }
 
-    Registros[4] = (numSeg << 16) | (offsetFinal & 0xFFFF); // LAR: direccion logica
+    Registros[4] = (numSeg << 16) | (offsetFinal & 0xFFFF); // LAR
     int dirFisica = TablaSegmentos[numSeg].base + offsetFinal;
-    Registros[5] = (4 << 16) | (dirFisica & 0xFFFF); // MAR dir fisica
+    Registros[5] = (tamLecturaEscritura << 16) | (dirFisica & 0xFFFF); // MAR
     return dirFisica;
 }
 
-int ObtenerValorOperando(int operando, unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]) // extrae el valor real del op
+int ObtenerValorOperando(int operando, unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    int tipo = (operando >> 24) & 0xFF; // tipo 1,2 y 3
-    int valor = operando & 0x00FFFFFF;  // valor crudo
+    int tipo = (operando >> 24) & 0xFF;
+    int valor = operando & 0x00FFFFFF;
 
-    if (tipo == 1)                      // registro
-        return Registros[valor & 0x1F]; // lo que contiene el registro de indice valor aca tambien me habia olvidado que eran 5bits nada mas
-    else if (tipo == 2)                 // inmediato
-        return (short)(valor & 0xFFFF); // 16bits
-    else if (tipo == 3)                 // en memoria
+    if (tipo == 1) // registro
     {
-        int dirFisica = CalcularDireccionFisica(valor, MemoriaPrincipal, Registros, TablaSegmentos); // Ya guarda en el MAR
-        // reconstruimos directamente en el MBR
-        Registros[6] = ((unsigned char)MemoriaPrincipal[dirFisica] << 24) |
-                       ((unsigned char)MemoriaPrincipal[dirFisica + 1] << 16) |
-                       ((unsigned char)MemoriaPrincipal[dirFisica + 2] << 8) |
-                       (unsigned char)MemoriaPrincipal[dirFisica + 3];
-        return Registros[6]; // devolvemos MBR
+        int codReg = valor & 0x1F;
+        int sector = (valor >> 5) & 0x03;
+        int valCompleto = Registros[codReg];
+
+        if (sector == 0) // EAX (4 bytes)
+            return valCompleto;
+        else if (sector == 1) // AL (1 byte bajo con signo propagado a 32 bits)
+            return (signed char)(valCompleto & 0xFF);
+        else if (sector == 2) // AH (1 byte alto con signo propagado a 32 bits)
+            return (signed char)((valCompleto >> 8) & 0xFF);
+        else if (sector == 3) // AX (2 bytes con signo propagado a 32 bits)
+            return (short)(valCompleto & 0xFFFF);
     }
-    return 0; // error o defecto, habria que ver despues como tratamos con los errores
-              // porque seguro los codigos que nos van a dar a probar van a tener errores aproposito
+    else if (tipo == 2) // inmediato (16 bits con signo)
+    {
+        return (short)(valor & 0xFFFF);
+    }
+    else if (tipo == 3) // Memoria
+    {
+        // los 3 bits más significativos del byte 0 indican tamaño (bits 5 a 7)
+        int cantMod = (valor >> 5) & 0x07;
+        int tamBytes = 4;
+        if (cantMod == 1)
+            tamBytes = 1; // b[...]
+        else if (cantMod == 2)
+            tamBytes = 2; // w[...]
+        else if (cantMod == 4)
+            tamBytes = 4; // l[...]
+
+        int dirFisica = CalcularDireccionFisica(valor, MemoriaPrincipal, Registros, TablaSegmentos, tamBytes);
+
+        if (tamBytes == 1)
+        {
+            Registros[6] = (unsigned char)MemoriaPrincipal[dirFisica];
+            return (signed char)MemoriaPrincipal[dirFisica]; // propagación de signo a 32 bits
+        }
+        else if (tamBytes == 2)
+        {
+            Registros[6] = ((unsigned char)MemoriaPrincipal[dirFisica] << 8) |
+                           (unsigned char)MemoriaPrincipal[dirFisica + 1];
+            return (short)Registros[6]; // propagación de signo a 32 bits
+        }
+        else
+        {
+            Registros[6] = ((unsigned char)MemoriaPrincipal[dirFisica] << 24) |
+                           ((unsigned char)MemoriaPrincipal[dirFisica + 1] << 16) |
+                           ((unsigned char)MemoriaPrincipal[dirFisica + 2] << 8) |
+                           (unsigned char)MemoriaPrincipal[dirFisica + 3];
+            return Registros[6];
+        }
+    }
+    return 0;
 }
-// guarda el resultado en el destino (OP1)
+
 void GuardarDestino(int operandoDestino, int resultado, unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    int tipo = (operandoDestino >> 24) & 0xFF; // tipo 1 o 3
-    int valor = operandoDestino & 0x00FFFFFF;  // la ubicacion fisica
+    int tipo = (operandoDestino >> 24) & 0xFF;
+    int valor = operandoDestino & 0x00FFFFFF;
 
-    if (tipo == 1)                           // registro
-        Registros[valor & 0x1F] = resultado; // pisamos el resultado en el indice valor, 5 bits
+    if (tipo == 1) // registro
+    {
+        int codReg = valor & 0x1F;
+        int sector = (valor >> 5) & 0x03;
 
+        if (sector == 0) // EAX completo
+        {
+            Registros[codReg] = resultado;
+        }
+        else if (sector == 1) // AL (modifica solo el byte 4, conservando los primeros 3)
+        {
+            Registros[codReg] = (Registros[codReg] & 0xFFFFFF00) | (resultado & 0xFF);
+        }
+        else if (sector == 2) // AH (modifica solo el byte 3)
+        {
+            Registros[codReg] = (Registros[codReg] & 0xFFFF00FF) | ((resultado & 0xFF) << 8);
+        }
+        else if (sector == 3) // AX (modifica los 2 bytes bajos)
+        {
+            Registros[codReg] = (Registros[codReg] & 0xFFFF0000) | (resultado & 0xFFFF);
+        }
+    }
     else if (tipo == 3) // memoria
     {
-        int dirFisica = CalcularDireccionFisica(valor, MemoriaPrincipal, Registros, TablaSegmentos);
+        int cantMod = (valor >> 5) & 0x07;
+        int tamBytes = 4;
+        if (cantMod == 1)
+            tamBytes = 1;
+        else if (cantMod == 2)
+            tamBytes = 2;
+        else if (cantMod == 4)
+            tamBytes = 4;
 
+        int dirFisica = CalcularDireccionFisica(valor, MemoriaPrincipal, Registros, TablaSegmentos, tamBytes);
         Registros[6] = resultado; // MBR
-        MemoriaPrincipal[dirFisica] = (resultado >> 24) & 0xFF;
-        MemoriaPrincipal[dirFisica + 1] = (resultado >> 16) & 0xFF;
-        MemoriaPrincipal[dirFisica + 2] = (resultado >> 8) & 0xFF;
-        MemoriaPrincipal[dirFisica + 3] = resultado & 0xFF;
+
+        if (tamBytes == 1)
+        {
+            MemoriaPrincipal[dirFisica] = resultado & 0xFF;
+        }
+        else if (tamBytes == 2)
+        {
+            MemoriaPrincipal[dirFisica + 0] = (resultado >> 8) & 0xFF;
+            MemoriaPrincipal[dirFisica + 1] = resultado & 0xFF;
+        }
+        else
+        {
+            MemoriaPrincipal[dirFisica + 0] = (resultado >> 24) & 0xFF;
+            MemoriaPrincipal[dirFisica + 1] = (resultado >> 16) & 0xFF;
+            MemoriaPrincipal[dirFisica + 2] = (resultado >> 8) & 0xFF;
+            MemoriaPrincipal[dirFisica + 3] = resultado & 0xFF;
+        }
     }
     else
     {
-        printf("\nError: Operando de destino invalido\n");
-        printf("\ntipo: %x   valor: %x     OPdest: %x", tipo, valor, operandoDestino);
+        printf("\n[ERROR] Operando de destino invalido: tipo %d\n", tipo);
+        exit(1);
     }
 }
 
@@ -445,8 +523,8 @@ void op_CMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
 void op_JC(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
-    if ((Registros[17] >> 29) & 1) // esta prendido C?
-        Registros[0] = valorA;     // IP a valorA
+    if ((Registros[17] >> 29) & 1)
+        SaltarA(Registros, valorA);
 }
 
 void op_JMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
@@ -573,4 +651,105 @@ void op_SWAP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSe
 
     GuardarDestino(Registros[2], valorB, MemoriaPrincipal, Registros, TablaSegmentos);
     GuardarDestino(Registros[3], valorA, MemoriaPrincipal, Registros, TablaSegmentos);
+}
+
+void op_PUSH(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    // decrementar el valor de SP en 4
+    Registros[7] -= 4;
+
+    // chequeo de STACK OVERFLOW
+    int segSS = (Registros[29] >> 16) & 0xFFFF;
+    int baseSS = TablaSegmentos[segSS].base;
+    if (Registros[7] < baseSS)
+    {
+        printf("\n[ERROR] STACK OVERFLOW\n");
+        exit(1);
+    }
+
+    // obtener operando transformado a 4 bytes
+    int valor = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
+
+    // guardar en memoria (Big-Endian)
+    int dir = Registros[7];
+    MemoriaPrincipal[dir + 0] = (valor >> 24) & 0xFF;
+    MemoriaPrincipal[dir + 1] = (valor >> 16) & 0xFF;
+    MemoriaPrincipal[dir + 2] = (valor >> 8) & 0xFF;
+    MemoriaPrincipal[dir + 3] = valor & 0xFF;
+}
+
+void op_POP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int segSS = (Registros[29] >> 16) & 0xFFFF;
+    int baseSS = TablaSegmentos[segSS].base;
+    int tamSS = TablaSegmentos[segSS].size;
+
+    // chequeo de STACK UNDERFLOW: la pila vacía está en baseSS + tamSS
+    if (Registros[7] + 4 > baseSS + tamSS)
+    {
+        printf("\n[ERROR] STACK UNDERFLOW\n");
+        exit(1);
+    }
+
+    // extraer 4 bytes en Big-Endian
+    int dir = Registros[7];
+    int valorExtraido = ((unsigned char)MemoriaPrincipal[dir + 0] << 24) |
+                        ((unsigned char)MemoriaPrincipal[dir + 1] << 16) |
+                        ((unsigned char)MemoriaPrincipal[dir + 2] << 8) |
+                        ((unsigned char)MemoriaPrincipal[dir + 3]);
+
+    // asignar el valor extraído al primer operando (OP1)
+    GuardarDestino(Registros[2], valorExtraido, MemoriaPrincipal, Registros, TablaSegmentos);
+
+    // incrementar el valor de SP en 4
+    Registros[7] += 4;
+}
+
+void op_CALL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    // CALL equivale a PUSH IP y luego JMP destino
+    Registros[7] -= 4;
+
+    int segSS = (Registros[29] >> 16) & 0xFFFF;
+    int baseSS = TablaSegmentos[segSS].base;
+    if (Registros[7] < baseSS)
+    {
+        printf("\n[ERROR] STACK OVERFLOW\n");
+        exit(1);
+    }
+
+    // el IP ya apunta a la siguiente instrucción
+    int ipRetorno = Registros[0];
+    int dir = Registros[7];
+    MemoriaPrincipal[dir + 0] = (ipRetorno >> 24) & 0xFF;
+    MemoriaPrincipal[dir + 1] = (ipRetorno >> 16) & 0xFF;
+    MemoriaPrincipal[dir + 2] = (ipRetorno >> 8) & 0xFF;
+    MemoriaPrincipal[dir + 3] = ipRetorno & 0xFF;
+
+    // salto al destino indicado por OP1
+    int destino = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
+    SaltarA(Registros, destino);
+}
+
+void op_RET(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    // RET equivale a POP IP
+    int segSS = (Registros[29] >> 16) & 0xFFFF;
+    int baseSS = TablaSegmentos[segSS].base;
+    int tamSS = TablaSegmentos[segSS].size;
+
+    if (Registros[7] + 4 > baseSS + tamSS)
+    {
+        printf("\n[ERROR] STACK UNDERFLOW\n");
+        exit(1);
+    }
+
+    int dir = Registros[7];
+    int ipExtraido = ((unsigned char)MemoriaPrincipal[dir + 0] << 24) |
+                     ((unsigned char)MemoriaPrincipal[dir + 1] << 16) |
+                     ((unsigned char)MemoriaPrincipal[dir + 2] << 8) |
+                     ((unsigned char)MemoriaPrincipal[dir + 3]);
+
+    Registros[7] += 4;
+    Registros[0] = ipExtraido;
 }

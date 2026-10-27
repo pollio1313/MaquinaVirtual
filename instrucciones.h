@@ -24,7 +24,7 @@ typedef struct
 typedef void (*InstruccionFunc)(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]); // puntero a funcion
 
 // auxiliares
-int CalcularDireccionFisica(int operandoMemoria, unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+int CalcularDireccionFisica(int operandoMemoria, unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[], int tamLecturaEscritura);
 int ObtenerValorOperando(int operando, unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void GuardarDestino(int operandoDestino, int resultado, unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 // prototipos de las funciones de ejecucion
@@ -56,5 +56,8 @@ void op_SAR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
 void op_LDL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_LDH(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 void op_RND(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
-
+void op_PUSH(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_POP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_CALL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
+void op_RET(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[]);
 #endif // INSTRUCCIONES_H
