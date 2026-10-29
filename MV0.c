@@ -734,7 +734,63 @@ int main(int argc, char *argv[])
     }
     else if (filenameVMI)
     {
-        // (Etapa 5): cargar imagen .vmi directamente
+        FILE *archVMI = fopen(filenameVMI, "rb");
+        if (!archVMI)
+        {
+            printf("[ERROR] No se pudo abrir el archivo de imagen %s\n", filenameVMI);
+            free(MemoriaPrincipal);
+            return 1;
+        }
+
+        // validar firma VMI26
+        char firmaVMI[5];
+        if (fread(firmaVMI, 1, 5, archVMI) != 5 || strncmp(firmaVMI, "VMI26", 5) != 0)
+        {
+            printf("[ERROR] Formato de imagen invalido (no es VMI26)\n");
+            fclose(archVMI);
+            free(MemoriaPrincipal);
+            return 1;
+        }
+
+        // leer version y tamaño de memoria en KiB
+        unsigned char verVMI;
+        fread(&verVMI, 1, 1, archVMI);
+        uint16_t memKiBArchivo = LeerWordBE(archVMI);
+
+        int tamEsperadoBytes = memKiBArchivo * 1024;
+        if (tamEsperadoBytes != tamMemoriaBytes)
+        {
+            // ajustar si la memoria difiere del parametro m=M
+            unsigned char *memRealloc = (unsigned char *)realloc(MemoriaPrincipal, tamEsperadoBytes);
+            if (!memRealloc)
+            {
+                printf("[ERROR] No se pudo reasignar memoria a %d KiB\n", memKiBArchivo);
+                fclose(archVMI);
+                free(MemoriaPrincipal);
+                return 1;
+            }
+            MemoriaPrincipal = memRealloc;
+            tamMemoriaBytes = tamEsperadoBytes;
+        }
+
+        // leer los 32 registros (Big-Endian de 4 bytes)
+        for (int i = 0; i < 32; i++)
+        {
+            unsigned char b[4];
+            fread(b, 1, 4, archVMI);
+            Registros[i] = ((int)b[0] << 24) | ((int)b[1] << 16) | ((int)b[2] << 8) | (int)b[3];
+        }
+
+        // leer la tabla de descriptores de segmentos (8 entradas x 4 bytes)
+        for (int i = 0; i < 8; i++)
+        {
+            TablaSegmentos[i].base = (short)LeerWordBE(archVMI);
+            TablaSegmentos[i].size = (short)LeerWordBE(archVMI);
+        }
+
+        // leer la memoria principal completa
+        fread(MemoriaPrincipal, 1, tamMemoriaBytes, archVMI);
+        fclose(archVMI);
     }
 
     gArchivoVMI = filenameVMI;
