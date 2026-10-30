@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdint.h>
+#include <ctype.h>
 #include "imagen.h"
 #include "instrucciones.h"
 
@@ -399,7 +400,7 @@ static void ImprimirOperando(int tipoOp, unsigned char bytes[])
     }
 }
 
-void MostrarCodigo(unsigned char *MemoriaPrincipal, char *cabecera, uint16_t LargoCod)
+void MostrarCodigo(unsigned char *MemoriaPrincipal, char *cabecera, uint16_t LargoCod, int Registros[])
 {
     int j = 0, cant;
     unsigned char codOperacion, OperandoA, OperandoB;
@@ -416,7 +417,13 @@ void MostrarCodigo(unsigned char *MemoriaPrincipal, char *cabecera, uint16_t Lar
 
         char buffer[100] = "";
         int pos = 0;
-        pos += snprintf(buffer + pos, sizeof(buffer) - pos, "[%04X] %02X ", posInicio, operacion);
+
+        int entryPoint = Registros[0] & 0xFFFF;
+
+        if (posInicio == entryPoint)
+            pos += snprintf(buffer + pos, sizeof(buffer) - pos, ">[%04X] %02X ", posInicio, operacion);
+        else
+            pos += snprintf(buffer + pos, sizeof(buffer) - pos, " [%04X] %02X ", posInicio, operacion);
 
         if (cant == 1)
         {
@@ -466,7 +473,74 @@ void MostrarCodigo(unsigned char *MemoriaPrincipal, char *cabecera, uint16_t Lar
         printf("\n");
     }
 }
+void MostrarConstantes(unsigned char *MemoriaPrincipal,Segmento TablaSegmentos[],int Registros[])
+{
+    int numKS = ((unsigned int)Registros[30] >> 16) & 0xFFFF;
 
+    printf("\n");
+
+    if (numKS >= 8 || TablaSegmentos[numKS].base < 0 ||
+        TablaSegmentos[numKS].size <= 0)
+        return;
+
+    int baseKS = TablaSegmentos[numKS].base;
+    int tamKS = TablaSegmentos[numKS].size;
+
+    int offset = 0;
+
+    while (offset < tamKS)
+    {
+        int inicio = offset;
+
+        // Buscar el final de la cadena
+        while (offset < tamKS &&
+               MemoriaPrincipal[baseKS + offset] != '\0')
+        {
+            offset++;
+        }
+
+        // Cantidad de bytes incluyendo el NULL, si existe
+        int longitud = offset - inicio;
+
+        if (offset < tamKS)
+            longitud++;
+
+        printf("[%04X] ", inicio);
+
+        // Mostrar bytes
+        int cantidadMostrar = (longitud > 7) ? 6 : longitud;
+
+        for (int i = 0; i < cantidadMostrar; i++)
+        {
+            printf("%02X ", MemoriaPrincipal[baseKS + inicio + i]);
+        }
+
+        if (longitud > 7)
+            printf("..");
+
+        printf(" | \"");
+
+        // Mostrar string completa
+        for (int i = inicio; i < offset; i++)
+        {
+            unsigned char c = MemoriaPrincipal[baseKS + i];
+
+            if (isprint(c))
+                printf("%c", c);
+            else
+                printf(".");
+        }
+
+        printf("\"\n");
+
+        // Si no había NULL, no podemos continuar con otra string
+        if (offset >= tamKS)
+            break;
+
+        // Saltar el terminador
+        offset++;
+    }
+}
 void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[], int Registros[])
 {
     char codOperacion, operandoA, operandoB;
@@ -819,8 +893,9 @@ int main(int argc, char *argv[])
 
         printf("--- INICIO DISASSEMBLER (segCS: %d, baseCS: %d, tamCS: %d) ---\n", segCS, baseCS, tamCS);
         fflush(stdout);
-
-        MostrarCodigo(MemoriaPrincipal + baseCS, "VMX26", tamCS);
+        
+        MostrarConstantes(MemoriaPrincipal, TablaSegmentos, Registros);
+        MostrarCodigo(MemoriaPrincipal + baseCS, "VMX26", tamCS, Registros);
         fflush(stdout);
 
         printf("--- FIN DISASSEMBLER ---\n");
