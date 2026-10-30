@@ -11,6 +11,14 @@ struct operando
     char *tipo;
     int cantBytes;
 };
+const char *pseudonimos[6][4] = {
+    {"EAX", "AL", "AH", "AX"},
+    {"EBX", "BL", "BH", "BX"},
+    {"ECX", "CL", "CH", "CX"},
+    {"EDX", "DL", "DH", "DX"},
+    {"EEX", "EL", "EH", "EX"},
+    {"EFX", "FL", "FH", "FX"}
+};
 
 const struct operando tablaOperandos[] = {
     {0, "ninguno", 0},
@@ -61,39 +69,13 @@ const struct Instruccion tablaInstrucciones[] = {
     {"RND", 0x1F, 2, op_RND}};
 
 const char *tablaRegistros[32] = {
-    // la tabla de registros, solamente devuelve el nombre, es apra la muestra, quizas habria q pasarla a estructura, para poner punteros a func
-    "IP",        // 0
-    "OPC",       // 1
-    "OP1",       // 2
-    "OP2",       // 3
-    "LAR",       // 4
-    "MAR",       // 5
-    "MBR",       // 6
-    "Reservado", // 7
-    "Reservado", // 8
-    "Reservado", // 9
-    "EAX",       // 10
-    "EBX",       // 11
-    "ECX",       // 12
-    "EDX",       // 13
-    "EEX",       // 14
-    "EFX",       // 15
-    "AC",        // 16
-    "CC",        // 17
-    "Reservado", // 18
-    "Reservado", // 19
-    "Reservado", // 20
-    "Reservado", // 21
-    "Reservado", // 22
-    "Reservado", // 23
-    "Reservado", // 24
-    "Reservado", // 25
-    "CS",        // 26
-    "DS",        // 27
-    "Reservado", // 28
-    "Reservado", // 29
-    "Reservado", // 30
-    "Programa"   // 31
+    "IP", "OPC", "OP1", "OP2", "LAR", "MAR", "MBR",
+    "SP", "BP", "Reservado",
+    "EAX", "EBX", "ECX", "EDX", "EEX", "EFX",
+    "AC", "CC",
+    "Reservado", "Reservado", "Reservado", "Reservado",
+    "Reservado", "Reservado", "Reservado", "Reservado",
+    "CS", "DS", "ES", "SS", "KS", "PS"
 };
 
 // lee dos bytes en formato Big-Endian
@@ -324,6 +306,20 @@ void MostrarBinario(char byte)
     }
 }
 
+void MostrarRegistro(unsigned char operando)
+{
+    int registro = operando & 0x1F;
+    int sector = (operando >> 5) & 0x03;
+
+    if (registro >= 10 && registro <= 15)
+    {
+        printf("%s", pseudonimos[registro - 10][sector]);
+    }
+    else
+    {
+        printf("%s", tablaRegistros[registro]);
+    }
+}
 void MostrarCodigo(unsigned char *MemoriaPrincipal, char *cabecera, uint16_t LargoCod)
 {
     int i = 0, j = 0, cant;
@@ -386,7 +382,7 @@ void MostrarCodigo(unsigned char *MemoriaPrincipal, char *cabecera, uint16_t Lar
             printf("| %s   ", tablaInstrucciones[codOperacion].nombre);
             if (OperandoA == 01)
             {
-                printf("%s", tablaRegistros[valorOPA[0]]);
+                MostrarRegistro(valorOPA[0]);
             }
             else if (OperandoA == 2)
             {
@@ -416,7 +412,7 @@ void MostrarCodigo(unsigned char *MemoriaPrincipal, char *cabecera, uint16_t Lar
             printf(",");
             if (OperandoB == 01)
             {
-                printf("%s", tablaRegistros[valorOPB[0]]);
+                MostrarRegistro(valorOPB[0]);
             }
             else if (OperandoB == 2)
             {
