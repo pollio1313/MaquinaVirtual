@@ -796,6 +796,16 @@ int main(int argc, char *argv[])
     gArchivoVMI = filenameVMI;
     gTamMemoriaBytes = tamMemoriaBytes;
 
+    if (mostrar_disassembler)
+    {
+        int segCS = (Registros[26] >> 16) & 0xFFFF;
+        int baseCS = TablaSegmentos[segCS].base;
+        MostrarCodigo(MemoriaPrincipal + baseCS, "VMX26", hdr.tamCS);
+        // Si la cátedra pide que con -d solo muestre y no ejecute:
+        // free(MemoriaPrincipal);
+        // return 0;
+    }
+
     EjecutarMaquina(MemoriaPrincipal, TablaSegmentos, Registros);
 
     // liberar memoria

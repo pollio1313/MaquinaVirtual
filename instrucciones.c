@@ -19,6 +19,10 @@ int CalcularDireccionFisica(int operandoMemoria, unsigned char MemoriaPrincipal[
         printf("\n[ERROR] Segmento invalido %d\n", numSeg);
         exit(1);
     }
+
+    printf("\n[DEBUG MEM] codReg:%d numSeg:%d base:%d size:%d offsetFinal:%d tamBytes:%d\n",
+           codReg, numSeg, TablaSegmentos[numSeg].base, TablaSegmentos[numSeg].size, offsetFinal, tamLecturaEscritura);
+
     // validar limite respetando la cantidad de bytes a leer/escribir
     if (offsetFinal < 0 || (offsetFinal + tamLecturaEscritura) > TablaSegmentos[numSeg].size)
     {
