@@ -758,78 +758,77 @@ void op_SWAP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSe
 
 void op_PUSH(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    // decrementar el valor de SP en 4
-    Registros[7] -= 4;
+    int segSS = (Registros[7] >> 16) & 0xFFFF;
+    int offsetSP = (Registros[7] & 0xFFFF) - 4;
 
-    // chequeo de STACK OVERFLOW
-    int segSS = (Registros[29] >> 16) & 0xFFFF;
-    int baseSS = TablaSegmentos[segSS].base;
-    if (Registros[7] < baseSS)
+    // Chequeo de STACK OVERFLOW: offset menor a 0
+    if (offsetSP < 0)
     {
         printf("\n[ERROR] STACK OVERFLOW\n");
         exit(1);
     }
 
-    // obtener operando transformado a 4 bytes
-    int valor = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
+    Registros[7] = (segSS << 16) | (offsetSP & 0xFFFF);
 
-    // guardar en memoria (Big-Endian)
-    int dir = Registros[7];
-    MemoriaPrincipal[dir + 0] = (valor >> 24) & 0xFF;
-    MemoriaPrincipal[dir + 1] = (valor >> 16) & 0xFF;
-    MemoriaPrincipal[dir + 2] = (valor >> 8) & 0xFF;
-    MemoriaPrincipal[dir + 3] = valor & 0xFF;
+    int valor = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
+    int dirFisica = TablaSegmentos[segSS].base + offsetSP;
+
+    MemoriaPrincipal[dirFisica + 0] = (valor >> 24) & 0xFF;
+    MemoriaPrincipal[dirFisica + 1] = (valor >> 16) & 0xFF;
+    MemoriaPrincipal[dirFisica + 2] = (valor >> 8) & 0xFF;
+    MemoriaPrincipal[dirFisica + 3] = valor & 0xFF;
 }
 
 void op_POP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    int segSS = (Registros[29] >> 16) & 0xFFFF;
-    int baseSS = TablaSegmentos[segSS].base;
+    int segSS = (Registros[7] >> 16) & 0xFFFF;
+    int offsetSP = Registros[7] & 0xFFFF;
     int tamSS = TablaSegmentos[segSS].size;
 
-    // chequeo de STACK UNDERFLOW: la pila vacía está en baseSS + tamSS
-    if (Registros[7] + 4 > baseSS + tamSS)
+    // Chequeo de STACK UNDERFLOW: pila vacia
+    if (offsetSP + 4 > tamSS)
     {
         printf("\n[ERROR] STACK UNDERFLOW\n");
         exit(1);
     }
 
-    // extraer 4 bytes en Big-Endian
-    int dir = Registros[7];
-    int valorExtraido = ((unsigned char)MemoriaPrincipal[dir + 0] << 24) |
-                        ((unsigned char)MemoriaPrincipal[dir + 1] << 16) |
-                        ((unsigned char)MemoriaPrincipal[dir + 2] << 8) |
-                        ((unsigned char)MemoriaPrincipal[dir + 3]);
+    int dirFisica = TablaSegmentos[segSS].base + offsetSP;
+    int valorExtraido = ((unsigned char)MemoriaPrincipal[dirFisica + 0] << 24) |
+                        ((unsigned char)MemoriaPrincipal[dirFisica + 1] << 16) |
+                        ((unsigned char)MemoriaPrincipal[dirFisica + 2] << 8) |
+                        ((unsigned char)MemoriaPrincipal[dirFisica + 3]);
 
-    // asignar el valor extraído al primer operando (OP1)
     GuardarDestino(Registros[2], valorExtraido, MemoriaPrincipal, Registros, TablaSegmentos);
 
-    // incrementar el valor de SP en 4
-    Registros[7] += 4;
+    Registros[7] = (segSS << 16) | ((offsetSP + 4) & 0xFFFF);
 }
 
 void op_CALL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     // CALL equivale a PUSH IP y luego JMP destino
-    Registros[7] -= 4;
+    int segSS = (Registros[7] >> 16) & 0xFFFF;
+    int offsetSP = (Registros[7] & 0xFFFF) - 4;
 
-    int segSS = (Registros[29] >> 16) & 0xFFFF;
-    int baseSS = TablaSegmentos[segSS].base;
-    if (Registros[7] < baseSS)
+    // Chequeo de STACK OVERFLOW: offset dentro del segmento menor a 0
+    if (offsetSP < 0)
     {
         printf("\n[ERROR] STACK OVERFLOW\n");
         exit(1);
     }
 
-    // el IP ya apunta a la siguiente instrucción
-    int ipRetorno = Registros[0];
-    int dir = Registros[7];
-    MemoriaPrincipal[dir + 0] = (ipRetorno >> 24) & 0xFF;
-    MemoriaPrincipal[dir + 1] = (ipRetorno >> 16) & 0xFF;
-    MemoriaPrincipal[dir + 2] = (ipRetorno >> 8) & 0xFF;
-    MemoriaPrincipal[dir + 3] = ipRetorno & 0xFF;
+    // Actualizar SP con el nuevo offset
+    Registros[7] = (segSS << 16) | (offsetSP & 0xFFFF);
 
-    // salto al destino indicado por OP1
+    // Guardar la dirección de retorno (el IP ya apunta a la siguiente instrucción)
+    int ipRetorno = Registros[0];
+    int dirFisica = TablaSegmentos[segSS].base + offsetSP;
+
+    MemoriaPrincipal[dirFisica + 0] = (ipRetorno >> 24) & 0xFF;
+    MemoriaPrincipal[dirFisica + 1] = (ipRetorno >> 16) & 0xFF;
+    MemoriaPrincipal[dirFisica + 2] = (ipRetorno >> 8) & 0xFF;
+    MemoriaPrincipal[dirFisica + 3] = ipRetorno & 0xFF;
+
+    // Salto al destino indicado por OP1
     int destino = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     SaltarA(Registros, destino);
 }
@@ -837,22 +836,24 @@ void op_CALL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSe
 void op_RET(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     // RET equivale a POP IP
-    int segSS = (Registros[29] >> 16) & 0xFFFF;
-    int baseSS = TablaSegmentos[segSS].base;
+    int segSS = (Registros[7] >> 16) & 0xFFFF;
+    int offsetSP = Registros[7] & 0xFFFF;
     int tamSS = TablaSegmentos[segSS].size;
 
-    if (Registros[7] + 4 > baseSS + tamSS)
+    // Chequeo de STACK UNDERFLOW: intentar desapilar más allá del límite del segmento
+    if (offsetSP + 4 > tamSS)
     {
         printf("\n[ERROR] STACK UNDERFLOW\n");
         exit(1);
     }
 
-    int dir = Registros[7];
-    int ipExtraido = ((unsigned char)MemoriaPrincipal[dir + 0] << 24) |
-                     ((unsigned char)MemoriaPrincipal[dir + 1] << 16) |
-                     ((unsigned char)MemoriaPrincipal[dir + 2] << 8) |
-                     ((unsigned char)MemoriaPrincipal[dir + 3]);
+    int dirFisica = TablaSegmentos[segSS].base + offsetSP;
+    int ipExtraido = ((unsigned char)MemoriaPrincipal[dirFisica + 0] << 24) |
+                     ((unsigned char)MemoriaPrincipal[dirFisica + 1] << 16) |
+                     ((unsigned char)MemoriaPrincipal[dirFisica + 2] << 8) |
+                     ((unsigned char)MemoriaPrincipal[dirFisica + 3]);
 
-    Registros[7] += 4;
+    // Avanzar SP y restaurar IP
+    Registros[7] = (segSS << 16) | ((offsetSP + 4) & 0xFFFF);
     Registros[0] = ipExtraido;
 }

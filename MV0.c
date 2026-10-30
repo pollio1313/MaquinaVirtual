@@ -61,7 +61,6 @@ const struct Instruccion tablaInstrucciones[] = {
     {"RND", 0x1F, 2, op_RND}};
 
 const char *tablaRegistros[32] = {
-    // la tabla de registros, solamente devuelve el nombre, es apra la muestra, quizas habria q pasarla a estructura, para poner punteros a func
     "IP",        // 0
     "OPC",       // 1
     "OP1",       // 2
@@ -69,8 +68,8 @@ const char *tablaRegistros[32] = {
     "LAR",       // 4
     "MAR",       // 5
     "MBR",       // 6
-    "Reservado", // 7
-    "Reservado", // 8
+    "SP",        // 7  (era Reservado)
+    "BP",        // 8  (era Reservado)
     "Reservado", // 9
     "EAX",       // 10
     "EBX",       // 11
@@ -90,10 +89,10 @@ const char *tablaRegistros[32] = {
     "Reservado", // 25
     "CS",        // 26
     "DS",        // 27
-    "Reservado", // 28
-    "Reservado", // 29
-    "Reservado", // 30
-    "Programa"   // 31
+    "ES",        // 28 (era Reservado)
+    "SS",        // 29 (era Reservado)
+    "KS",        // 30 (era Reservado)
+    "PS"         // 31 (era Programa)
 };
 
 // lee dos bytes en formato Big-Endian
@@ -324,132 +323,145 @@ void MostrarBinario(char byte)
     }
 }
 
+const char *ObtenerNombreRegistro(unsigned char regByte)
+{
+    int cod = regByte & 0x1F;
+    int sector = (regByte >> 5) & 0x03;
+
+    // si es uno de los 6 registros de propósito general (EAX a EFX: 10 a 15)
+    if (cod >= 10 && cod <= 15)
+    {
+        char letra = 'A' + (cod - 10);
+        static char nombreReg[5];
+        if (sector == 0) // EAX, EBX, etc.
+            snprintf(nombreReg, sizeof(nombreReg), "E%cX", letra);
+        else if (sector == 1) // AL, BL, etc.
+            snprintf(nombreReg, sizeof(nombreReg), "%cL", letra);
+        else if (sector == 2) // AH, BH, etc.
+            snprintf(nombreReg, sizeof(nombreReg), "%cH", letra);
+        else if (sector == 3) // AX, BX, etc.
+            snprintf(nombreReg, sizeof(nombreReg), "%cX", letra);
+        return nombreReg;
+    }
+
+    // para el resto de los registros (IP, SP, BP, CS, DS, etc.)
+    if (cod < 32)
+        return tablaRegistros[cod];
+
+    return "DESCONOCIDO";
+}
+
+static void ImprimirOperando(int tipoOp, unsigned char bytes[])
+{
+    if (tipoOp == 1) // Registro
+    {
+        printf("%s", ObtenerNombreRegistro(bytes[0]));
+    }
+    else if (tipoOp == 2) // Inmediato (2 bytes Big-Endian)
+    {
+        short valInm = (short)((bytes[0] << 8) | bytes[1]);
+        printf("%d", valInm); // o printf("0x%X", valInm & 0xFFFF);
+    }
+    else if (tipoOp == 3) // memoria (offset: 2 bytes, reg/modificador: 1 byte)
+    {
+        short offset = (short)((bytes[0] << 8) | bytes[1]);
+        unsigned char modReg = bytes[2];
+        int codReg = modReg & 0x1F;
+        int cantMod = (modReg >> 5) & 0x07;
+
+        // Prefijo segun el tamano
+        char prefijo = 'l';
+        if (cantMod == 1)
+            prefijo = 'b';
+        else if (cantMod == 2)
+            prefijo = 'w';
+        else if (cantMod == 4)
+            prefijo = 'l';
+
+        printf("%c[", prefijo);
+
+        if (codReg == 0 && offset != 0) // sin registro base (o IP = 0), solo offset directo
+        {
+            printf("%d", offset);
+        }
+        else if (offset == 0) // solo registro base
+        {
+            printf("%s", ObtenerNombreRegistro(codReg));
+        }
+        else // registro base + offset
+        {
+            if (offset > 0)
+                printf("%s+%d", ObtenerNombreRegistro(codReg), offset);
+            else
+                printf("%s%d", ObtenerNombreRegistro(codReg), offset);
+        }
+        printf("]");
+    }
+}
+
 void MostrarCodigo(unsigned char *MemoriaPrincipal, char *cabecera, uint16_t LargoCod)
 {
-    int i = 0, j = 0, cant;
-    char codOperacion, OperandoA, OperandoB, valorOPA[3] = {0}, valorOPB[3] = {0};
+    int j = 0, cant;
+    unsigned char codOperacion, OperandoA, OperandoB;
+    unsigned char valorOPA[3] = {0}, valorOPB[3] = {0};
+
     printf("%.5s\n", cabecera);
 
     while (j < LargoCod)
-    {                                              // este es el while q recorre el copdigo y lo muestra la condicion es j<CS
-        codOperacion = MemoriaPrincipal[j] & 0x1F; // aplico una mascara, para sacarle los ultimos 5 bits y asi tenes el codigo de operacion
-        char operacion = MemoriaPrincipal[j];
+    {
+        int posInicio = j;
+        unsigned char operacion = MemoriaPrincipal[j];
+        codOperacion = operacion & 0x1F;
         cant = tablaInstrucciones[codOperacion].cantOP;
-        /*
-        printf("\n");
-        MostrarBinario(operacion);
-        printf("\n"); */
+
         char buffer[100] = "";
         int pos = 0;
-        pos += snprintf(buffer + pos, sizeof(buffer) - pos, "[%04X] %02X ", j, (operacion & 0xFF)); // esta linea sumas al buffer la celda de mem y el binario de la operacion
-        // printf("[%04X] %2X ",j,(operacion)&0xFF);
+        pos += snprintf(buffer + pos, sizeof(buffer) - pos, "[%04X] %02X ", posInicio, operacion);
 
-        if (cant == 01)
+        if (cant == 1)
         {
+            OperandoA = (operacion >> 6) & 0x03;
 
-            OperandoA = operacion >> 6 & 0x03;
-
-            for (int q = 0; q < OperandoA; q++)
-            { // while apra consumir los valores de operandos, si es 0 sigeun de largo ,uso operandoB y no cantBytes porq valen lo mismo
-                j++;
-                valorOPA[q] = MemoriaPrincipal[j];
-                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%X", valorOPA[q] & 0xFF);
-                // printf("%X", valorOPA[q]);
-            }
-            printf("%-30s", buffer);
-            printf("| %s   ", tablaInstrucciones[codOperacion].nombre);
             for (int q = 0; q < OperandoA; q++)
             {
-                printf("%X", valorOPA[q] & 0xFF);
+                j++;
+                valorOPA[q] = MemoriaPrincipal[j];
+                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%02X ", valorOPA[q]);
             }
+
+            printf("%-30s | %s ", buffer, tablaInstrucciones[codOperacion].nombre);
+            ImprimirOperando(OperandoA, valorOPA);
         }
-        else if (cant == 02)
-        { // se fija cuantos bytes chupa cada operando
+        else if (cant == 2)
+        {
+            // En memoria binaria primero vienen los bytes de OPB y luego OPA
             OperandoB = (operacion >> 6) & 0x03;
             for (int q = 0; q < OperandoB; q++)
             {
-                j++; // parece qprimero viene el byte mas signfiquitaivo
+                j++;
                 valorOPB[q] = MemoriaPrincipal[j];
-                // printf("%02X ", valorOPB[q]);
-                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%02X ", valorOPB[q] & 0xFF);
+                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%02X ", valorOPB[q]);
             }
+
             OperandoA = (operacion >> 4) & 0x03;
             for (int q = 0; q < OperandoA; q++)
             {
                 j++;
                 valorOPA[q] = MemoriaPrincipal[j];
-                // printf("%02X ", valorOPA[q]);
-                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%02X ", valorOPA[q] & 0xFF);
+                pos += snprintf(buffer + pos, sizeof(buffer) - pos, "%02X ", valorOPA[q]);
             }
 
-            printf("%-30s", buffer);
-            printf("| %s   ", tablaInstrucciones[codOperacion].nombre);
-            if (OperandoA == 01)
-            {
-                printf("%s", tablaRegistros[valorOPA[0]]);
-            }
-            else if (OperandoA == 2)
-            {
-                for (int q = 0; q < OperandoA; q++)
-                {
-                    printf("%2X", valorOPA[q] & 0xFF);
-                }
-            }
-            else
-            {
-                int offset = (valorOPA[0] << 8) | (valorOPA[1]);
-                int registro = valorOPA[2] & 0x1F;
-
-                if (registro == 0)
-                {
-                    printf("[%X]", offset);
-                }
-                else if (offset == 0)
-                {
-                    printf("[%s]", tablaRegistros[registro]);
-                }
-                else
-                {
-                    printf("[%s+%X]", tablaRegistros[registro], offset);
-                }
-            }
-            printf(",");
-            if (OperandoB == 01)
-            {
-                printf("%s", tablaRegistros[valorOPB[0]]);
-            }
-            else if (OperandoB == 2)
-            {
-                for (int q = 0; q < OperandoB; q++)
-                {
-                    printf("%X", valorOPB[q] & 0xFF);
-                }
-            }
-            else
-            {
-                int offset = (valorOPB[0] << 8) | (valorOPB[1]);
-                int registro = valorOPB[2] & 0x1F;
-
-                if (registro == 0)
-                {
-                    printf("[%X]", offset);
-                }
-                else if (offset == 0)
-                {
-                    printf("[%s]", tablaRegistros[registro]);
-                }
-                else
-                {
-                    printf("[%s+%X]", tablaRegistros[registro], offset);
-                }
-            }
+            printf("%-30s | %s ", buffer, tablaInstrucciones[codOperacion].nombre);
+            // Formato tradicional ASM: Destino (A), Origen (B)
+            ImprimirOperando(OperandoA, valorOPA);
+            printf(", ");
+            ImprimirOperando(OperandoB, valorOPB);
         }
-        else if (cant == 00)
-        { // esta linea esta de mas, porq ya deberian valer 0 de antes
-            OperandoA = OperandoB = 0;
-            printf("%-30s", buffer);
-            printf("| %s   ", tablaInstrucciones[codOperacion].nombre);
+        else // cant == 0
+        {
+            printf("%-30s | %s", buffer, tablaInstrucciones[codOperacion].nombre);
         }
+
         j++;
         printf("\n");
     }
@@ -690,46 +702,49 @@ int main(int argc, char *argv[])
             int baseSS = TablaSegmentos[segSS].base;
             int tamSS = TablaSegmentos[segSS].size;
 
-            // SP arranca apuntando fuera del Stack Segment (pila vacia)
-            Registros[7] = baseSS + tamSS;
+            // SP en direccion logica (segmento : offset)
+            int offsetSP = tamSS;
+            Registros[7] = (segSS << 16) | (offsetSP & 0xFFFF);
 
             // calcular puntero a *argv en Param Segment
-            int ptrArgv = -1; // 0xFFFFFFFF por defecto si no hay params
+            int ptrArgv = -1;
             if (cantParams > 0 && hdr.tamPS > 0)
             {
                 int bytesStrings = 0;
                 for (int p = 0; p < cantParams; p++)
                     bytesStrings += strlen(params[p]) + 1;
 
-                // el arreglo argv se ubica inmediatamente despues de las cadenas en el segmento 0
                 ptrArgv = (0 << 16) | (bytesStrings & 0xFFFF);
             }
 
             int argcVal = cantParams;
 
             // apilar *argv
-            Registros[7] -= 4;
-            int dir = Registros[7];
+            offsetSP -= 4;
+            int dir = baseSS + offsetSP;
             MemoriaPrincipal[dir + 0] = (ptrArgv >> 24) & 0xFF;
             MemoriaPrincipal[dir + 1] = (ptrArgv >> 16) & 0xFF;
             MemoriaPrincipal[dir + 2] = (ptrArgv >> 8) & 0xFF;
             MemoriaPrincipal[dir + 3] = ptrArgv & 0xFF;
 
             // apilar argc
-            Registros[7] -= 4;
-            dir = Registros[7];
+            offsetSP -= 4;
+            dir = baseSS + offsetSP;
             MemoriaPrincipal[dir + 0] = (argcVal >> 24) & 0xFF;
             MemoriaPrincipal[dir + 1] = (argcVal >> 16) & 0xFF;
             MemoriaPrincipal[dir + 2] = (argcVal >> 8) & 0xFF;
             MemoriaPrincipal[dir + 3] = argcVal & 0xFF;
 
             // apilar RET (-1 = 0xFFFFFFFF)
-            Registros[7] -= 4;
-            dir = Registros[7];
+            offsetSP -= 4;
+            dir = baseSS + offsetSP;
             MemoriaPrincipal[dir + 0] = 0xFF;
             MemoriaPrincipal[dir + 1] = 0xFF;
             MemoriaPrincipal[dir + 2] = 0xFF;
             MemoriaPrincipal[dir + 3] = 0xFF;
+
+            // SP final
+            Registros[7] = (segSS << 16) | (offsetSP & 0xFFFF);
         }
     }
     else if (filenameVMI)
@@ -800,10 +815,19 @@ int main(int argc, char *argv[])
     {
         int segCS = (Registros[26] >> 16) & 0xFFFF;
         int baseCS = TablaSegmentos[segCS].base;
-        MostrarCodigo(MemoriaPrincipal + baseCS, "VMX26", hdr.tamCS);
-        // Si la cátedra pide que con -d solo muestre y no ejecute:
-        // free(MemoriaPrincipal);
-        // return 0;
+        int tamCS = TablaSegmentos[segCS].size;
+
+        printf("--- INICIO DISASSEMBLER (segCS: %d, baseCS: %d, tamCS: %d) ---\n", segCS, baseCS, tamCS);
+        fflush(stdout);
+
+        MostrarCodigo(MemoriaPrincipal + baseCS, "VMX26", tamCS);
+        fflush(stdout);
+
+        printf("--- FIN DISASSEMBLER ---\n");
+        fflush(stdout);
+
+        free(MemoriaPrincipal);
+        return 0;
     }
 
     EjecutarMaquina(MemoriaPrincipal, TablaSegmentos, Registros);

@@ -1,0 +1,60 @@
+Archivo a ejecutar: pruebas_disassembler_mv2.vmx
+Memoria asignada: 16 KiB (16384 bytes)
+Modo disassembler: SI
+--- INICIO DISASSEMBLER (segCS: 1, baseCS: 25, tamCS: 201) ---
+VMX26
+[0000] 90 AB CD 0A             | MOV EAX, -21555
+[0004] 90 04 D2 6A             | MOV AX, 1234
+[0008] 90 00 41 4A             | MOV AH, 65
+[000C] 90 00 5A 2A             | MOV AL, 90
+[0010] 50 0A 0B                | MOV EBX, EAX
+[0013] 50 6A 6B                | MOV BX, AX
+[0016] 50 4A 4B                | MOV BH, AH
+[0019] 50 2A 2B                | MOV BL, AL
+[001C] 90 00 0A 0C             | MOV ECX, 10
+[0020] 90 00 14 0D             | MOV EDX, 20
+[0024] 90 00 1E 0E             | MOV EEX, 30
+[0028] 90 00 28 0F             | MOV EFX, 40
+[002C] 50 1B 0A                | MOV EAX, DS
+[002F] 50 1C 0B                | MOV EBX, Reservado
+[0032] 50 1D 0C                | MOV ECX, Reservado
+[0035] 50 1E 0D                | MOV EDX, Reservado
+[0038] 50 1F 0E                | MOV EEX, Programa
+[003B] 50 07 08                | MOV Reservado, Reservado
+[003E] 70 2A 00 00 3B          | MOV b[DS], AL
+[0043] 70 6A 00 02 5B          | MOV w[DS+2], AX
+[0048] 70 0A 00 04 9B          | MOV l[DS+4], EAX
+[004D] D0 00 00 3B 2A          | MOV AL, b[DS]
+[0052] D0 00 02 5B 6A          | MOV AX, w[DS+2]
+[0057] D0 00 04 9B 0A          | MOV EAX, l[DS+4]
+[005C] 70 4A 00 08 3B          | MOV b[DS+8], AH
+[0061] 70 6B 00 0A 5C          | MOV w[Reservado+10], BX
+[0066] 70 0D 00 0C 9C          | MOV l[Reservado+12], EDX
+[006B] D0 00 00 4B 6A          | MOV AX, w[EBX]
+[0070] D0 00 04 8D 0A          | MOV EAX, l[EDX+4]
+[0075] D0 00 08 28 2B          | MOV BL, b[Reservado+8]
+[007A] 91 00 01 0A             | ADD EAX, 1
+[007E] 92 00 02 0B             | SUB EBX, 2
+[0082] 93 00 03 0C             | MUL ECX, 3
+[0086] 94 00 04 0D             | DIV EDX, 4
+[008A] 56 0B 0A                | AND EAX, EBX
+[008D] 97 00 FF 6A             | OR AX, 255
+[0091] 98 00 0F 2A             | XOR AL, 15
+[0095] 4A 0A                   | NOT EAX
+[0097] 9A 00 01 0A             | SHL EAX, 1
+[009B] 9B 00 02 0B             | SHR EBX, 2
+[009F] 9C 00 01 0C             | SAR ECX, 1
+[00A3] 4B 0A                   | PUSH EAX
+[00A5] 4B 6A                   | PUSH AX
+[00A7] 8B 56 78                | PUSH 22136
+[00AA] 4C 0F                   | POP EFX
+[00AC] CC 00 04 5C             | POP w[Reservado+4]
+[00B0] CB 00 08 3B             | PUSH b[DS+8]
+[00B4] CC 00 0C 9B             | POP l[DS+12]
+[00B8] 80 00 00                | SYS 0
+[00BB] 50 1E 0D                | MOV EDX, Reservado
+[00BE] 91 00 00 0D             | ADD EDX, 0
+[00C2] 80 00 04                | SYS 4
+[00C5] 80 00 0F                | SYS 15
+[00C8] 0F                      | STOP
+--- FIN DISASSEMBLER ---
