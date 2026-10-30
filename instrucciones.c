@@ -173,28 +173,131 @@ static void SaltarA(int Registros[], int destino)
 // todas las operaciones desarrolladas
 void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    int modo = Registros[10];                      // EAX formato
-    int cantCeldas = Registros[12] & 0xFFFF;       // ECX bajo cantidad
-    int tamBytes = (Registros[12] >> 16) & 0xFFFF; // ECX alto tamaño bytes
-    int dirLogica = Registros[13];                 // EDX puntero de inicio
-
+    int dirLogica = Registros[13]; // EDX: puntero de inicio / dirección lógica
     int subcodigo = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
 
+    // 1. SYS 0xF: BREAKPOINT
     if (subcodigo == 0xF)
     {
         Breakpoint(MemoriaPrincipal, Registros, TablaSegmentos);
         return;
     }
 
+    // 2. SYS 0x00: CLEAR SCREEN
+    if (subcodigo == 0x00)
+    {
+        printf("\033[H\033[J");
+        return;
+    }
+
+    // 3. SYS 0x03: STRING READ
+    if (subcodigo == 0x03)
+    {
+        int numSeg = (dirLogica >> 16) & 0xFFFF;
+        int offset = dirLogica & 0xFFFF;
+
+        if (numSeg < 0 || numSeg >= 8 || TablaSegmentos[numSeg].size == 0xFFFF || (short)TablaSegmentos[numSeg].base == -1)
+        {
+            printf("\n[ERROR] Segmento invalido en SYS 0x03: %d\n", numSeg);
+            exit(1);
+        }
+
+        int maxChars = Registros[12]; // ECX: limite
+        int leidos = 0;
+        char buffer[1024];
+
+        if (fgets(buffer, sizeof(buffer), stdin) != NULL)
+        {
+            for (int k = 0; buffer[k] != '\0' && buffer[k] != '\n'; k++)
+            {
+                if (maxChars != -1 && leidos >= maxChars)
+                    break;
+
+                if ((offset + leidos) >= TablaSegmentos[numSeg].size)
+                {
+                    printf("\n[ERROR] Fuera del limite de segmento en SYS 0x03\n");
+                    exit(1);
+                }
+
+                int dirFisica = TablaSegmentos[numSeg].base + offset + leidos;
+                MemoriaPrincipal[dirFisica] = buffer[k];
+                leidos++;
+            }
+        }
+
+        if ((offset + leidos) >= TablaSegmentos[numSeg].size)
+        {
+            printf("\n[ERROR] Fuera del limite de segmento en SYS 0x03 al escribir terminador\n");
+            exit(1);
+        }
+        MemoriaPrincipal[TablaSegmentos[numSeg].base + offset + leidos] = '\0';
+        return;
+    }
+
+    // 4. SYS 0x04: STRING WRITE
+    if (subcodigo == 0x04)
+    {
+        int numSeg = (dirLogica >> 16) & 0xFFFF;
+        int offset = dirLogica & 0xFFFF;
+
+        if (numSeg < 0 || numSeg >= 8 || TablaSegmentos[numSeg].size == 0xFFFF || (short)TablaSegmentos[numSeg].base == -1)
+        {
+            printf("\n[ERROR] Segmento invalido en SYS 0x04: %d\n", numSeg);
+            exit(1);
+        }
+
+        char buffer[1024];
+        int indice = 0;
+
+        while (1)
+        {
+            if (offset >= TablaSegmentos[numSeg].size)
+            {
+                printf("\n[ERROR] Fuera del limite de segmento en SYS 0x04\n");
+                exit(1);
+            }
+
+            int dirFisica = TablaSegmentos[numSeg].base + offset;
+            char c = (char)MemoriaPrincipal[dirFisica];
+
+            if (c == '\0')
+                break;
+
+            buffer[indice++] = c;
+            offset++;
+
+            // si se llena el buffer local, lo vaciamos a pantalla con printf
+            if (indice >= (int)(sizeof(buffer) - 1))
+            {
+                buffer[indice] = '\0';
+                printf("%s", buffer);
+                indice = 0;
+            }
+        }
+
+        // imprimir lo que haya quedado
+        if (indice > 0)
+        {
+            buffer[indice] = '\0';
+            printf("%s", buffer);
+        }
+
+        return;
+    }
+
+    // SYS 0x01 y 0x02: READ y WRITE numerico / celdas multiples (Parte I)
+    int modo = Registros[10];                      // EAX: formato
+    int cantCeldas = Registros[12] & 0xFFFF;       // ECX bajo: cantidad
+    int tamBytes = (Registros[12] >> 16) & 0xFFFF; // ECX alto: tamaño en bytes
+
     if (tamBytes <= 0)
-        tamBytes = 4; // por defecto 4 bytes
+        tamBytes = 4;
 
     for (int i = 0; i < cantCeldas; i++)
     {
         int numSeg = (dirLogica >> 16) & 0xFFFF;
         int offset = dirLogica & 0xFFFF;
 
-        // Validar segmento
         if (numSeg < 0 || numSeg >= 8 || TablaSegmentos[numSeg].size == 0xFFFF || (short)TablaSegmentos[numSeg].base == -1)
         {
             printf("\n[ERROR] Fallo de segmento en SYS (Segmento invalido %d)\n", numSeg);
@@ -236,7 +339,7 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
                     if (binStr[j] == '0' || binStr[j] == '1')
                         dato = (dato << 1) | (binStr[j] - '0');
             }
-            else // Decimal por defecto (0x01)
+            else // Decimal
                 scanf("%d", &dato);
 
             Registros[6] = dato; // MBR
@@ -247,22 +350,18 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
         else if (subcodigo == 2) // WRITE
         {
             int valor = 0;
-
             for (int j = 0; j < tamBytes; j++)
                 valor = (valor << 8) | (unsigned char)MemoriaPrincipal[dirFisica + j];
 
             Registros[6] = valor; // MBR
 
-            if (modo & 0x10) // Binario
+            if (modo & 0x10)
                 ImprimirBinario(valor, tamBytes);
-
-            if (modo & 0x08) // Hexa
+            if (modo & 0x08)
                 printf(" 0x%X ", valor);
-
-            if (modo & 0x04) // Octal
+            if (modo & 0x04)
                 printf(" 0o%o ", valor);
-
-            if (modo & 0x02) // Caracteres
+            if (modo & 0x02)
             {
                 for (int j = 0; j < tamBytes; j++)
                 {
@@ -270,8 +369,7 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
                     printf(" %c ", c);
                 }
             }
-
-            if (modo & 0x01) // Decimal
+            if (modo & 0x01)
             {
                 if (tamBytes == 1 && (valor & 0x80))
                     valor |= 0xFFFFFF00;
@@ -283,9 +381,10 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
             printf("\n");
         }
 
-        dirLogica += tamBytes; // siguiente celda
+        dirLogica += tamBytes;
     }
 }
+
 void op_STOP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     Registros[0] = -1;
