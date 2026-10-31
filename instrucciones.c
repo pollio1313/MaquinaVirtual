@@ -484,7 +484,7 @@ void op_SUB(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
         Registros[17] = Registros[17] | (1 << 31);                                                   // prende N
     if ((long long)valorA - (long long)valorB != (long long)resultado) // desbordamiento
         Registros[17] = Registros[17] | (1 << 28);                                                   // Prende V
-    if ((unsigned int)valorA < (unsigned int)valorB)
+    if (valorA < valorB) // C: el resultado "se pasa" del rango sin signo (tabla del enunciado: SUB -3,5 -> C=1)
         Registros[17] = Registros[17] | (1 << 29); // Prende C
     GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros, TablaSegmentos);
 }
@@ -674,7 +674,7 @@ void op_CMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
         Registros[17] = Registros[17] | (1 << 31);                                                   // prende N
     if ((long long)valorA - (long long)valorB != (long long)resultado) // desbordamiento
         Registros[17] = Registros[17] | (1 << 28);                                                   // Prende V
-    if ((unsigned int)valorA < (unsigned int)valorB)
+    if (valorA < valorB) // C: el resultado "se pasa" del rango sin signo (tabla del enunciado: SUB -3,5 -> C=1)
         Registros[17] = Registros[17] | (1 << 29); // Prende C
 }
 
