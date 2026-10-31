@@ -1,0 +1,191 @@
+C:\Users\junio\OneDrive\Desktop\MaquinaVirtual>vmx err_div0.vmx -d
+>[0000] 90 00 05 0A         | MOV  EAX, 5
+[0004] 90 00 00 0B          | MOV  EBX, 0
+[0008] 54 0B 0A             | DIV  EAX, EBX
+[000B] 0F                   | STOP
+
+[ERROR] Division por cero
+
+C:\Users\junio\OneDrive\Desktop\MaquinaVirtual>vmx err_overflow.vmx -d
+>[0000] 8B 00 01            | PUSH 1
+[0003] 8B 00 02             | PUSH 2
+[0006] 8B 00 03             | PUSH 3
+[0009] 8B 00 04             | PUSH 4
+[000C] 0F                   | STOP
+
+[ERROR] STACK OVERFLOW
+
+C:\Users\junio\OneDrive\Desktop\MaquinaVirtual>vmx err_segmento.vmx -d
+>[0000] D0 70 00 9B 0A      | MOV  EAX, l[DS+28672]
+[0005] 0F                   | STOP
+
+[ERROR] Fuera del limite de segmento.
+
+C:\Users\junio\OneDrive\Desktop\MaquinaVirtual>vmx err_underflow.vmx -d
+>[0000] 4C 0A               | POP  EAX
+[0002] 4C 0A                | POP  EAX
+[0004] 4C 0A                | POP  EAX
+[0006] 4C 0A                | POP  EAX
+[0008] 0F                   | STOP
+
+[ERROR] STACK UNDERFLOW
+
+C:\Users\junio\OneDrive\Desktop\MaquinaVirtual>vmx flags.vmx -d
+>[0000] 50 1B 0D            | MOV  EDX, DS
+[0003] 90 FF FF 0A          | MOV  EAX, -1
+[0007] 70 11 00 00 8D       | MOV  l[EDX+0], CC
+[000C] 70 0A 00 04 8D       | MOV  l[EDX+4], EAX
+[0011] 9E 7F FF 0A          | LDH  EAX, 32767
+[0015] 9D FF FF 0A          | LDL  EAX, -1
+[0019] 50 0A 0B             | MOV  EBX, EAX
+[001C] 51 0B 0A             | ADD  EAX, EBX
+[001F] 70 11 00 08 8D       | MOV  l[EDX+8], CC
+[0024] 70 0A 00 0C 8D       | MOV  l[EDX+12], EAX
+[0029] 90 FF FD 0A          | MOV  EAX, -3
+[002D] 92 00 05 0A          | SUB  EAX, 5
+[0031] 70 11 00 10 8D       | MOV  l[EDX+16], CC
+[0036] 70 0A 00 14 8D       | MOV  l[EDX+20], EAX
+[003B] 9E 40 00 0A          | LDH  EAX, 16384
+[003F] 9D 00 03 0A          | LDL  EAX, 3
+[0043] 93 00 04 0A          | MUL  EAX, 4
+[0047] 70 11 00 18 8D       | MOV  l[EDX+24], CC
+[004C] 70 0A 00 1C 8D       | MOV  l[EDX+28], EAX
+[0051] 90 00 06 0A          | MOV  EAX, 6
+[0055] 94 00 07 0A          | DIV  EAX, 7
+[0059] 70 11 00 20 8D       | MOV  l[EDX+32], CC
+[005E] 70 0A 00 24 8D       | MOV  l[EDX+36], EAX
+[0063] 70 10 00 28 8D       | MOV  l[EDX+40], AC
+[0068] 90 00 05 0A          | MOV  EAX, 5
+[006C] 95 00 05 0A          | CMP  EAX, 5
+[0070] 70 11 00 2C 8D       | MOV  l[EDX+44], CC
+[0075] 90 00 08 0A          | MOV  EAX, 8
+[0079] 90 00 0C 0C          | MOV  ECX, 12
+[007D] 9E 00 04 0C          | LDH  ECX, 4
+[0081] 80 00 02             | SYS  2
+[0084] 0F                   | STOP
+[0085]: 0x80000000
+[0089]: 0xFFFFFFFF
+[008D]: 0x90000000
+[0091]: 0xFFFFFFFE
+[0095]: 0xA0000000
+[0099]: 0xFFFFFFF8
+[009D]: 0x30000000
+[00A1]: 0xC
+[00A5]: 0x40000000
+[00A9]: 0x0
+[00AD]: 0x6
+[00B1]: 0x40000000
+
+C:\Users\junio\OneDrive\Desktop\MaquinaVirtual>vmx pila.vmx -d
+>[0000] 50 1B 0D            | MOV  EDX, DS
+[0003] D0 00 00 87 0A       | MOV  EAX, l[SP+0]
+[0008] 70 0A 00 00 8D       | MOV  l[EDX+0], EAX
+[000D] D0 00 04 87 0A       | MOV  EAX, l[SP+4]
+[0012] 70 0A 00 04 8D       | MOV  l[EDX+4], EAX
+[0017] D0 00 08 87 0A       | MOV  EAX, l[SP+8]
+[001C] 70 0A 00 08 8D       | MOV  l[EDX+8], EAX
+[0021] 70 07 00 0C 8D       | MOV  l[EDX+12], SP
+[0026] 8B 00 05             | PUSH 5
+[0029] 8B 00 07             | PUSH 7
+[002C] 8D 00 57             | CALL 87
+[002F] 91 00 08 07          | ADD  SP, 8
+[0033] 70 0A 00 10 8D       | MOV  l[EDX+16], EAX
+[0038] 70 07 00 14 8D       | MOV  l[EDX+20], SP
+[003D] 8B 12 34             | PUSH 4660
+[0040] 4C 0B                | POP  EBX
+[0042] 70 0B 00 18 8D       | MOV  l[EDX+24], EBX
+[0047] 90 00 08 0A          | MOV  EAX, 8
+[004B] 90 00 08 0C          | MOV  ECX, 8
+[004F] 9E 00 04 0C          | LDH  ECX, 4
+[0053] 80 00 02             | SYS  2
+[0056] 0F                   | STOP
+[0057] 70 07 00 1C 8D       | MOV  l[EDX+28], SP
+[005C] D0 00 04 87 0A       | MOV  EAX, l[SP+4]
+[0061] D1 00 08 87 0A       | ADD  EAX, l[SP+8]
+[0066] 0E                   | RET
+[0067]: 0xFFFFFFFF
+[006B]: 0x0
+[006F]: 0xFFFFFFFF
+[0073]: 0x30034
+[0077]: 0xC
+[007B]: 0x30034
+[007F]: 0x1234
+[0083]: 0x30028
+
+C:\Users\junio\OneDrive\Desktop\MaquinaVirtual>vmx registros_logica.vmx -d
+>[0000] 50 1B 0D            | MOV  EDX, DS
+[0003] 9E 12 34 0A          | LDH  EAX, 4660
+[0007] 9D 56 78 0A          | LDL  EAX, 22136
+[000B] 90 00 AB 4A          | MOV  AH, 171
+[000F] 70 0A 00 00 8D       | MOV  l[EDX+0], EAX
+[0014] 90 00 FF 2A          | MOV  AL, 255
+[0018] 70 0A 00 04 8D       | MOV  l[EDX+4], EAX
+[001D] 90 00 01 6A          | MOV  AX, 1
+[0021] 70 0A 00 08 8D       | MOV  l[EDX+8], EAX
+[0026] 50 0A 0B             | MOV  EBX, EAX
+[0029] 9A 00 04 0B          | SHL  EBX, 4
+[002D] 70 0B 00 0C 8D       | MOV  l[EDX+12], EBX
+[0032] 90 FF F0 0C          | MOV  ECX, -16
+[0036] 9C 00 02 0C          | SAR  ECX, 2
+[003A] 70 0C 00 10 8D       | MOV  l[EDX+16], ECX
+[003F] 90 FF F0 0C          | MOV  ECX, -16
+[0043] 9B 00 1C 0C          | SHR  ECX, 28
+[0047] 70 0C 00 14 8D       | MOV  l[EDX+20], ECX
+[004C] 90 00 F0 0E          | MOV  EEX, 240
+[0050] 96 0F 0F 0E          | AND  EEX, 3855
+[0054] 70 0E 00 18 8D       | MOV  l[EDX+24], EEX
+[0059] 90 00 F0 0F          | MOV  EFX, 240
+[005D] 97 0F 0F 0F          | OR   EFX, 3855
+[0061] 70 0F 00 1C 8D       | MOV  l[EDX+28], EFX
+[0066] 98 00 FF 0F          | XOR  EFX, 255
+[006A] 70 0F 00 20 8D       | MOV  l[EDX+32], EFX
+[006F] 4A 0F                | NOT  EFX
+[0071] 70 0F 00 24 8D       | MOV  l[EDX+36], EFX
+[0076] 59 0F 0E             | SWAP EEX, EFX
+[0079] 70 0E 00 28 8D       | MOV  l[EDX+40], EEX
+[007E] 70 0F 00 2C 8D       | MOV  l[EDX+44], EFX
+[0083] 90 00 08 0A          | MOV  EAX, 8
+[0087] 90 00 0C 0C          | MOV  ECX, 12
+[008B] 9E 00 04 0C          | LDH  ECX, 4
+[008F] 80 00 02             | SYS  2
+[0092] 0F                   | STOP
+[0093]: 0x1234AB78
+[0097]: 0x1234ABFF
+[009B]: 0x12340001
+[009F]: 0x23400010
+[00A3]: 0xFFFFFFFC
+[00A7]: 0xF
+[00AB]: 0x0
+[00AF]: 0xFFF
+[00B3]: 0xF00
+[00B7]: 0xFFFFF0FF
+[00BB]: 0xFFFFF0FF
+[00BF]: 0x0
+
+C:\Users\junio\OneDrive\Desktop\MaquinaVirtual>vmx sys_formatos.vmx -d
+>[0000] B0 00 41 00 0A 9B   | MOV  l[DS+10], 65
+[0006] BA 00 08 00 0A 9B    | SHL  l[DS+10], 8
+[000C] B7 00 61 00 0A 9B    | OR   l[DS+10], 97
+[0012] 50 1B 0D             | MOV  EDX, DS
+[0015] 91 00 0C 0D          | ADD  EDX, 12
+[0019] 9E 00 02 0C          | LDH  ECX, 2
+[001D] 9D 00 01 0C          | LDL  ECX, 1
+[0021] 90 00 0F 0A          | MOV  EAX, 15
+[0025] 80 00 02             | SYS  2
+[0028] 9E 00 04 0C          | LDH  ECX, 4
+[002C] 90 00 01 0A          | MOV  EAX, 1
+[0030] 50 1B 0D             | MOV  EDX, DS
+[0033] 80 00 01             | SYS  1
+[0036] 90 00 08 0A          | MOV  EAX, 8
+[003A] 80 00 02             | SYS  2
+[003D] 90 00 08 0A          | MOV  EAX, 8
+[0041] 50 1B 0D             | MOV  EDX, DS
+[0044] 80 00 01             | SYS  1
+[0047] 90 00 01 0A          | MOV  EAX, 1
+[004B] 80 00 02             | SYS  2
+[004E] 0F                   | STOP
+[005B]: 0x4161 0o40541 Aa 16737
+[004F]: 1
+[004F]: 0x1
+[004F]: 2
+[004F]: 2
