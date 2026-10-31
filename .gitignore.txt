@@ -1,0 +1,19 @@
+cat << 'EOF' > .gitignore
+# Ejecutables compilados
+*.exe
+vmx
+vmx.exe
+
+# Archivos objeto y temporales de compilación
+*.o
+*.obj
+
+# Volcados de memoria y logs de pruebas
+*.vmi
+salida.txt
+*.log
+
+# Archivos de configuración de editores/IDE
+.vscode/
+.idea/
+EOF
