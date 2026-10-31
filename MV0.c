@@ -421,9 +421,9 @@ void MostrarCodigo(unsigned char *MemoriaPrincipal, char *cabecera, uint16_t Lar
         int entryPoint = Registros[0] & 0xFFFF;
 
         if (posInicio == entryPoint)
-            pos += snprintf(buffer + pos, sizeof(buffer) - pos, ">[%04X] %02X ", posInicio, operacion);
+            pos += snprintf(buffer + pos, sizeof(buffer) - pos, "> [%04X] %02X ", posInicio, operacion);
         else
-            pos += snprintf(buffer + pos, sizeof(buffer) - pos, " [%04X] %02X ", posInicio, operacion);
+            pos += snprintf(buffer + pos, sizeof(buffer) - pos, "  [%04X] %02X ", posInicio, operacion);
 
         if (cant == 1)
         {
@@ -473,11 +473,9 @@ void MostrarCodigo(unsigned char *MemoriaPrincipal, char *cabecera, uint16_t Lar
         printf("\n");
     }
 }
-void MostrarConstantes(unsigned char *MemoriaPrincipal,Segmento TablaSegmentos[],int Registros[])
+void MostrarConstantes(unsigned char *MemoriaPrincipal, Segmento TablaSegmentos[], int Registros[])
 {
     int numKS = ((unsigned int)Registros[30] >> 16) & 0xFFFF;
-
-    printf("\n");
 
     if (numKS >= 8 || TablaSegmentos[numKS].base < 0 ||
         TablaSegmentos[numKS].size <= 0)
@@ -654,7 +652,7 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
         gBreakpointEjecutado = 0;
         tablaInstrucciones[codOperacion].ejecutar(MemoriaPrincipal, Registros, TablaSegmentos);
 
-        if (codOperacion == 0x0F) // STOP
+        if (codOperacion == 0x0F || Registros[0] == -1) // STOP o RET de subrutina principal
             break;
 
         if (gPasoAPaso && !gBreakpointEjecutado) // modo paso a paso
@@ -762,10 +760,6 @@ int main(int argc, char *argv[])
     // carga del proceso
     if (filenameVMX)
     {
-        printf("Archivo a ejecutar: %s\n", filenameVMX);
-        printf("Memoria asignada: %d KiB (%d bytes)\n", tamMemoriaKiB, tamMemoriaBytes);
-        printf("Modo disassembler: %s\n", mostrar_disassembler ? "SI" : "NO");
-
         CargarProgramaVMX(filenameVMX, &MemoriaPrincipal, tamMemoriaBytes, &hdr, params, cantParams);
         ConstruirTablaSegmentos(&hdr, TablaSegmentos, Registros, tamMemoriaBytes);
 
@@ -776,11 +770,9 @@ int main(int argc, char *argv[])
             int baseSS = TablaSegmentos[segSS].base;
             int tamSS = TablaSegmentos[segSS].size;
 
-            // SP en direccion logica (segmento : offset)
             int offsetSP = tamSS;
             Registros[7] = (segSS << 16) | (offsetSP & 0xFFFF);
 
-            // calcular puntero a *argv en Param Segment
             int ptrArgv = -1;
             if (cantParams > 0 && hdr.tamPS > 0)
             {
@@ -817,7 +809,6 @@ int main(int argc, char *argv[])
             MemoriaPrincipal[dir + 2] = 0xFF;
             MemoriaPrincipal[dir + 3] = 0xFF;
 
-            // SP final
             Registros[7] = (segSS << 16) | (offsetSP & 0xFFFF);
         }
     }
@@ -891,15 +882,8 @@ int main(int argc, char *argv[])
         int baseCS = TablaSegmentos[segCS].base;
         int tamCS = TablaSegmentos[segCS].size;
 
-        printf("--- INICIO DISASSEMBLER (segCS: %d, baseCS: %d, tamCS: %d) ---\n", segCS, baseCS, tamCS);
-        fflush(stdout);
-        
         MostrarConstantes(MemoriaPrincipal, TablaSegmentos, Registros);
         MostrarCodigo(MemoriaPrincipal + baseCS, "VMX26", tamCS, Registros);
-        fflush(stdout);
-
-        printf("--- FIN DISASSEMBLER ---\n");
-        fflush(stdout);
 
         free(MemoriaPrincipal);
         return 0;

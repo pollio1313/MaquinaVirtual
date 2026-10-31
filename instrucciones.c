@@ -20,9 +20,6 @@ int CalcularDireccionFisica(int operandoMemoria, unsigned char MemoriaPrincipal[
         exit(1);
     }
 
-    printf("\n[DEBUG MEM] codReg:%d numSeg:%d base:%d size:%d offsetFinal:%d tamBytes:%d\n",
-           codReg, numSeg, TablaSegmentos[numSeg].base, TablaSegmentos[numSeg].size, offsetFinal, tamLecturaEscritura);
-
     // validar limite respetando la cantidad de bytes a leer/escribir
     if (offsetFinal < 0 || (offsetFinal + tamLecturaEscritura) > TablaSegmentos[numSeg].size)
     {
@@ -300,7 +297,7 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
     for (int i = 0; i < cantCeldas; i++)
     {
         int numSeg = (dirLogica >> 16) & 0xFFFF;
-        int offset = dirLogica & 0xFFFF;
+        int offset = (dirLogica & 0xFFFF) + (i * tamBytes);
 
         if (numSeg < 0 || numSeg >= 8 || TablaSegmentos[numSeg].size == 0xFFFF || (short)TablaSegmentos[numSeg].base == -1)
         {
@@ -314,7 +311,7 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
         }
 
         int dirFisica = TablaSegmentos[numSeg].base + offset;
-        Registros[4] = dirLogica;                               // LAR
+        Registros[4] = (numSeg << 16) | (offset & 0xFFFF);      // LAR
         Registros[5] = (tamBytes << 16) | (dirFisica & 0xFFFF); // MAR
 
         printf("[%04X]: ", dirFisica);
@@ -384,8 +381,6 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
             }
             printf("\n");
         }
-
-        dirLogica += tamBytes;
     }
 }
 
