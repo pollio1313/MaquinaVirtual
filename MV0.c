@@ -362,16 +362,18 @@ const char *ObtenerNombreRegistro(unsigned char regByte)
     return "DESCONOCIDO";
 }
 
-static void ImprimirOperando(int tipoOp, unsigned char bytes[])
+// escribe el operando en texto (para poder alinearlo en columnas)
+static void FormatearOperando(int tipoOp, unsigned char bytes[], char *dst, size_t n)
 {
+    dst[0] = '\0';
     if (tipoOp == 1) // Registro
     {
-        printf("%s", ObtenerNombreRegistro(bytes[0]));
+        snprintf(dst, n, "%s", ObtenerNombreRegistro(bytes[0]));
     }
     else if (tipoOp == 2) // Inmediato (2 bytes Big-Endian)
     {
         short valInm = (short)((bytes[0] << 8) | bytes[1]);
-        printf("%d", valInm);
+        snprintf(dst, n, "%d", valInm);
     }
     else if (tipoOp == 3) // memoria (offset: 2 bytes, modificador + registro: 1 byte)
     {
@@ -381,18 +383,13 @@ static void ImprimirOperando(int tipoOp, unsigned char bytes[])
         int cantMod = (modReg >> 5) & 0x07;
 
         // prefijo segun el modificador (sin prefijo en programas v1, donde esos bits no se usan)
-        if (cantMod == 1)
-            printf("b");
-        else if (cantMod == 2)
-            printf("w");
-        else if (cantMod == 4)
-            printf("l");
+        const char *pref = (cantMod == 1) ? "b" : (cantMod == 2) ? "w" : (cantMod == 4) ? "l" : "";
 
         // siempre registro+offset, incluso con offset 0 (ej: b[DS+0])
         if (offset >= 0)
-            printf("[%s+%d]", ObtenerNombreRegistro(codReg), offset);
+            snprintf(dst, n, "%s[%s+%d]", pref, ObtenerNombreRegistro(codReg), offset);
         else
-            printf("[%s%d]", ObtenerNombreRegistro(codReg), offset);
+            snprintf(dst, n, "%s[%s%d]", pref, ObtenerNombreRegistro(codReg), offset);
     }
 }
 
@@ -441,25 +438,20 @@ void MostrarCodigo(unsigned char *MemoriaPrincipal, int baseCS, int LargoCod, in
 
         // columna de bytes de ancho fijo (7 bytes = 20 caracteres) para que el "|" quede alineado;
         // la marca ">" ocupa un caracter, asi que la linea del entry point usa uno menos
-        int esEntry = (posInicio == entryPoint);
-        printf("%s[%04X] %-*s | ", esEntry ? ">" : "", baseCS + posInicio, esEntry ? COL_BYTES - 1 : COL_BYTES, buffer);
+        // formato del enunciado: la marca (">" en el entry point, o un espacio) ocupa la columna previa al "["
+        printf("%c[%04X] %-*s | ", (posInicio == entryPoint) ? '>' : ' ', baseCS + posInicio, COL_BYTES, buffer);
+
+        // operandos alineados a la derecha en columnas fijas: mnemonico(4) + A(11) "," B(11)
+        char txtA[32], txtB[32];
+        FormatearOperando(tipoA, valorOPA, txtA, sizeof(txtA));
+        FormatearOperando(tipoB, valorOPB, txtB, sizeof(txtB));
 
         if (cant == 0)
-        {
             printf("%s", tablaInstrucciones[codOperacion].nombre);
-        }
         else if (cant == 1)
-        {
-            printf("%-4s ", tablaInstrucciones[codOperacion].nombre); // mnemonico alineado (maximo 4 letras)
-            ImprimirOperando(tipoA, valorOPA);
-        }
-        else if (cant == 2)
-        {
-            printf("%-4s ", tablaInstrucciones[codOperacion].nombre);
-            ImprimirOperando(tipoA, valorOPA); // Assembler: destino (A), origen (B)
-            printf(", ");
-            ImprimirOperando(tipoB, valorOPB);
-        }
+            printf("%-4s%11s", tablaInstrucciones[codOperacion].nombre, txtA);
+        else // Assembler: destino (A), origen (B)
+            printf("%-4s%11s,%11s", tablaInstrucciones[codOperacion].nombre, txtA, txtB);
         printf("\n");
 
         j += largo;
@@ -500,7 +492,7 @@ void MostrarConstantes(unsigned char *MemoriaPrincipal, Segmento TablaSegmentos[
         if (longitud > 7)
             snprintf(bytesTxt + n, sizeof(bytesTxt) - n, " ..");
 
-        printf("[%04X] %-*s | \"", baseKS + inicio, COL_BYTES, bytesTxt); // direccion fisica
+        printf(" [%04X] %-*s | \"", baseKS + inicio, COL_BYTES, bytesTxt); // direccion fisica (col. de la marca ">" en blanco)
         for (int i = inicio; i < offset; i++)
         {
             unsigned char c = MemoriaPrincipal[baseKS + i];
