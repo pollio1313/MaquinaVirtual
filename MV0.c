@@ -19,6 +19,7 @@ struct operando
     int cantBytes;
 };
 
+#define COL_BYTES 20                // ancho de la columna de bytes del desensamblador (7 bytes: "XX XX XX XX XX XX XX")
 #define MAX_PARAMS 64               // maximo de parametros de -p (incluye el nombre del .vmx)
 #define EJECUTAR_TRAS_DESENSAMBLAR 1 // 1: -d muestra el codigo y luego ejecuta; 0: -d solo muestra y termina
 
@@ -438,17 +439,23 @@ void MostrarCodigo(unsigned char *MemoriaPrincipal, int baseCS, int LargoCod, in
             pos += snprintf(buffer + pos, sizeof(buffer) - pos, " %02X", valorOPA[q]);
         }
 
-        printf("%s[%04X] %s | %s", (posInicio == entryPoint) ? ">" : "", baseCS + posInicio, buffer,
-               tablaInstrucciones[codOperacion].nombre);
+        // columna de bytes de ancho fijo (7 bytes = 20 caracteres) para que el "|" quede alineado;
+        // la marca ">" ocupa un caracter, asi que la linea del entry point usa uno menos
+        int esEntry = (posInicio == entryPoint);
+        printf("%s[%04X] %-*s | ", esEntry ? ">" : "", baseCS + posInicio, esEntry ? COL_BYTES - 1 : COL_BYTES, buffer);
 
-        if (cant == 1)
+        if (cant == 0)
         {
-            printf(" ");
+            printf("%s", tablaInstrucciones[codOperacion].nombre);
+        }
+        else if (cant == 1)
+        {
+            printf("%-4s ", tablaInstrucciones[codOperacion].nombre); // mnemonico alineado (maximo 4 letras)
             ImprimirOperando(tipoA, valorOPA);
         }
         else if (cant == 2)
         {
-            printf(" ");
+            printf("%-4s ", tablaInstrucciones[codOperacion].nombre);
             ImprimirOperando(tipoA, valorOPA); // Assembler: destino (A), origen (B)
             printf(", ");
             ImprimirOperando(tipoB, valorOPB);
@@ -484,15 +491,16 @@ void MostrarConstantes(unsigned char *MemoriaPrincipal, Segmento TablaSegmentos[
         if (offset < tamKS)
             longitud++;
 
-        printf("[%04X] ", baseKS + inicio); // direccion fisica
-
+        char bytesTxt[COL_BYTES + 8];
+        int n = 0;
         int cantidadMostrar = (longitud > 7) ? 6 : longitud;
+        bytesTxt[0] = '\0';
         for (int i = 0; i < cantidadMostrar; i++)
-            printf(i ? " %02X" : "%02X", MemoriaPrincipal[baseKS + inicio + i]);
+            n += snprintf(bytesTxt + n, sizeof(bytesTxt) - n, i ? " %02X" : "%02X", MemoriaPrincipal[baseKS + inicio + i]);
         if (longitud > 7)
-            printf(" ..");
+            snprintf(bytesTxt + n, sizeof(bytesTxt) - n, " ..");
 
-        printf(" | \"");
+        printf("[%04X] %-*s | \"", baseKS + inicio, COL_BYTES, bytesTxt); // direccion fisica
         for (int i = inicio; i < offset; i++)
         {
             unsigned char c = MemoriaPrincipal[baseKS + i];
