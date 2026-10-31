@@ -4,6 +4,31 @@
 #include "imagen.h"
 #include <limits.h>
 
+// ---------- auxiliares internas ----------
+
+// un segmento es valido si esta en la tabla (0..7) y su entrada no esta marcada como vacia (-1)
+static int SegmentoValido(int numSeg, Segmento TablaSegmentos[])
+{
+    return numSeg >= 0 && numSeg < 8 && TablaSegmentos[numSeg].base != -1 && TablaSegmentos[numSeg].size != -1;
+}
+
+// despues de un scanf, descarta el resto de la linea si son solo blancos (para que un fgets posterior
+// no lea una linea vacia). Si hay otro dato en la misma linea lo deja en stdin.
+static void ConsumirFinDeLinea(void)
+{
+    int c;
+    while ((c = getchar()) == ' ' || c == '\t' || c == '\r')
+        ;
+    if (c != '\n' && c != EOF)
+        ungetc(c, stdin);
+}
+
+static void ErrorPila(const char *msg)
+{
+    printf("\n[ERROR] %s\n", msg);
+    exit(1);
+}
+
 // tres funciones auxiliares
 
 int CalcularDireccionFisica(int operandoMemoria, unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[], int tamLecturaEscritura)
@@ -14,7 +39,7 @@ int CalcularDireccionFisica(int operandoMemoria, unsigned char MemoriaPrincipal[
     int offsetFinal = (Registros[codReg] & 0xFFFF) + offset;
 
     // validar existencia de segmento
-    if (numSeg < 0 || numSeg >= 8 || TablaSegmentos[numSeg].size == 0xFFFF || (short)TablaSegmentos[numSeg].base == -1)
+    if (!SegmentoValido(numSeg, TablaSegmentos))
     {
         printf("\n[ERROR] Segmento invalido %d\n", numSeg);
         exit(1);
@@ -161,9 +186,15 @@ void GuardarDestino(int operandoDestino, int resultado, unsigned char MemoriaPri
 
 void ImprimirBinario(int valor, int tamByte)
 {
+    unsigned int v = (unsigned int)valor;
+    int i = tamByte * 8 - 1;
+    if (i > 31)
+        i = 31;
+    while (i > 0 && !((v >> i) & 1)) // sin ceros a la izquierda (0b1001000)
+        i--;
     printf("0b");
-    for (int i = (tamByte * 8) - 1; i >= 0; i--)
-        printf("%d", (valor >> i) & 1);
+    for (; i >= 0; i--)
+        printf("%d", (v >> i) & 1);
 }
 
 static void SaltarA(int Registros[], int destino)
@@ -197,7 +228,7 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
         int numSeg = (dirLogica >> 16) & 0xFFFF;
         int offset = dirLogica & 0xFFFF;
 
-        if (numSeg < 0 || numSeg >= 8 || TablaSegmentos[numSeg].size == 0xFFFF || (short)TablaSegmentos[numSeg].base == -1)
+        if (!SegmentoValido(numSeg, TablaSegmentos))
         {
             printf("\n[ERROR] Segmento invalido en SYS 0x03: %d\n", numSeg);
             exit(1);
@@ -241,7 +272,7 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
         int numSeg = (dirLogica >> 16) & 0xFFFF;
         int offset = dirLogica & 0xFFFF;
 
-        if (numSeg < 0 || numSeg >= 8 || TablaSegmentos[numSeg].size == 0xFFFF || (short)TablaSegmentos[numSeg].base == -1)
+        if (!SegmentoValido(numSeg, TablaSegmentos))
         {
             printf("\n[ERROR] Segmento invalido en SYS 0x04: %d\n", numSeg);
             exit(1);
@@ -286,6 +317,12 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
         return;
     }
 
+    if (subcodigo != 0x01 && subcodigo != 0x02)
+    {
+        printf("\n[ERROR] Llamada al sistema invalida: 0x%X\n", subcodigo);
+        exit(1);
+    }
+
     // SYS 0x01 y 0x02: READ y WRITE numerico / celdas multiples (Parte I)
     int modo = Registros[10];                      // EAX: formato
     int cantCeldas = Registros[12] & 0xFFFF;       // ECX bajo: cantidad
@@ -299,7 +336,7 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
         int numSeg = (dirLogica >> 16) & 0xFFFF;
         int offset = (dirLogica & 0xFFFF) + (i * tamBytes);
 
-        if (numSeg < 0 || numSeg >= 8 || TablaSegmentos[numSeg].size == 0xFFFF || (short)TablaSegmentos[numSeg].base == -1)
+        if (!SegmentoValido(numSeg, TablaSegmentos))
         {
             printf("\n[ERROR] Fallo de segmento en SYS (Segmento invalido %d)\n", numSeg);
             exit(1);
@@ -343,6 +380,7 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
             else // Decimal
                 scanf("%d", &dato);
 
+            ConsumirFinDeLinea();
             Registros[6] = dato; // MBR
 
             for (int j = 0; j < tamBytes; j++)
@@ -356,19 +394,32 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
 
             Registros[6] = valor; // MBR
 
+            int hayPrevio = 0; // un solo espacio entre representaciones: 0x4161 0o40541 Aa 16737
             if (modo & 0x10)
+            {
                 ImprimirBinario(valor, tamBytes);
+                hayPrevio = 1;
+            }
             if (modo & 0x08)
-                printf(" 0x%X ", valor);
+            {
+                printf("%s0x%X", hayPrevio ? " " : "", (unsigned int)valor);
+                hayPrevio = 1;
+            }
             if (modo & 0x04)
-                printf(" 0o%o ", valor);
+            {
+                printf("%s0o%o", hayPrevio ? " " : "", (unsigned int)valor);
+                hayPrevio = 1;
+            }
             if (modo & 0x02)
             {
+                if (hayPrevio)
+                    printf(" ");
                 for (int j = 0; j < tamBytes; j++)
                 {
-                    char c = (valor >> (8 * (tamBytes - 1 - j))) & 0xFF;
-                    printf(" %c ", c);
+                    unsigned char c = MemoriaPrincipal[dirFisica + j];
+                    putchar((c >= 32 && c < 127) ? c : '.'); // no imprimible -> punto
                 }
+                hayPrevio = 1;
             }
             if (modo & 0x01)
             {
@@ -377,7 +428,7 @@ void op_SYS(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
                 else if (tamBytes == 2 && (valor & 0x8000))
                     valor |= 0xFFFF0000;
 
-                printf(" %d ", valor);
+                printf("%s%d", hayPrevio ? " " : "", valor);
             }
             printf("\n");
         }
@@ -404,7 +455,7 @@ void op_ADD(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos);
-    int resultado = valorA + valorB;
+    int resultado = (int)((unsigned int)valorA + (unsigned int)valorB);
 
     Registros[17] = 0; // iniciamos CC
     // ayudamemoria xd
@@ -413,7 +464,7 @@ void op_ADD(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
         Registros[17] = Registros[17] | (1 << 30); // prende Z
     if (resultado < 0)
         Registros[17] = Registros[17] | (1 << 31);                                                   // prende N
-    if ((valorA > 0 && valorB > 0 && resultado < 0) || (valorA < 0 && valorB < 0 && resultado >= 0)) // casos de desbordamiento
+    if ((long long)valorA + (long long)valorB != (long long)resultado) // desbordamiento
         Registros[17] = Registros[17] | (1 << 28);                                                   // Prende V
     if ((unsigned int)valorA + (unsigned int)valorB < (unsigned int)valorA)
         Registros[17] = Registros[17] | (1 << 29);                                        // Prende C
@@ -424,14 +475,14 @@ void op_SUB(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos);
-    int resultado = valorA - valorB;
+    int resultado = (int)((unsigned int)valorA - (unsigned int)valorB);
     Registros[17] = 0; // iniciamos CC
     //  bit 32 N bit 31 Z bit 30 C (acarreo) bit 29 V (desbordamiento) demas 28 bits reservados
     if (resultado == 0)
         Registros[17] = Registros[17] | (1 << 30); // prende Z
     if (resultado < 0)
         Registros[17] = Registros[17] | (1 << 31);                                                   // prende N
-    if ((valorA > 0 && valorB < 0 && resultado < 0) || (valorA < 0 && valorB > 0 && resultado >= 0)) // casos de desbordamiento
+    if ((long long)valorA - (long long)valorB != (long long)resultado) // desbordamiento
         Registros[17] = Registros[17] | (1 << 28);                                                   // Prende V
     if ((unsigned int)valorA < (unsigned int)valorB)
         Registros[17] = Registros[17] | (1 << 29); // Prende C
@@ -465,8 +516,17 @@ void op_DIV(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
     Registros[17] = 0; // iniciamos CC
     if (valorB != 0)
     {
-        int resultado = valorA / valorB;
-        Registros[16] = valorA % valorB; // guardar el resto en AC
+        int resultado;
+        if (valorA == INT_MIN && valorB == -1) // evita SIGFPE
+        {
+            resultado = INT_MIN;
+            Registros[16] = 0;
+        }
+        else
+        {
+            resultado = valorA / valorB;
+            Registros[16] = valorA % valorB; // guardar el resto en AC
+        }
         //  bit 32 N bit 31 Z bit 30 C (acarreo) bit 29 V (desbordamiento) demas 28 bits reservados
         if (resultado == 0)
             Registros[17] = Registros[17] | (1 << 30); // prende Z
@@ -547,7 +607,7 @@ void op_SHL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
                 Registros[17] = Registros[17] | (1 << 29); // prende C
         }
 
-        int resultado = valorA << valorB;
+        int resultado = (int)((unsigned int)valorA << valorB);
         //  bit 32 N bit 31 Z bit 30 C (acarreo) bit 29 V (desbordamiento) demas 28 bits reservados
         if (resultado == 0)
             Registros[17] = Registros[17] | (1 << 30); // prende Z
@@ -585,7 +645,7 @@ void op_SAR(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos);
     Registros[17] = 0; // iniciamos CC
-    if (valorB > 0 && valorB < 32)
+    if (valorB >= 0 && valorB < 32)
     {
         if (valorB > 0)
         {
@@ -606,13 +666,13 @@ void op_CMP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
 {
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos);
-    int resultado = valorA - valorB;
+    int resultado = (int)((unsigned int)valorA - (unsigned int)valorB);
     Registros[17] = 0; // iniciamos CC
     if (resultado == 0)
         Registros[17] = Registros[17] | (1 << 30); // prende Z
     if (resultado < 0)
         Registros[17] = Registros[17] | (1 << 31);                                                   // prende N
-    if ((valorA > 0 && valorB < 0 && resultado < 0) || (valorA < 0 && valorB > 0 && resultado >= 0)) // casos de desbordamiento
+    if ((long long)valorA - (long long)valorB != (long long)resultado) // desbordamiento
         Registros[17] = Registros[17] | (1 << 28);                                                   // Prende V
     if ((unsigned int)valorA < (unsigned int)valorB)
         Registros[17] = Registros[17] | (1 << 29); // Prende C
@@ -724,17 +784,12 @@ void op_NOT(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSeg
 void op_RND(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     int limite = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos); // el segundo operando es el limite
-    int resultado = rand();                                                                       // numero aleatorio
+    int resultado = 0;
 
     if (limite > 0)
-        resultado = rand() % (limite + 1);
+        resultado = rand() % (limite + 1); // entre 0 y limite (inclusive)
 
-    Registros[17] = 0; // iniciamos CC
-    if (resultado == 0)
-        Registros[17] = Registros[17] | (1 << 30); // prende Z
-    if (resultado < 0)
-        Registros[17] = Registros[17] | (1 << 31); // prende N
-
+    // RND no esta entre las instrucciones que afectan al CC
     GuardarDestino(Registros[2], resultado, MemoriaPrincipal, Registros, TablaSegmentos);
 }
 void op_SWAP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
@@ -742,88 +797,100 @@ void op_SWAP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSe
     int valorA = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     int valorB = ObtenerValorOperando(Registros[3], MemoriaPrincipal, Registros, TablaSegmentos);
 
+    // equivale a XOR A,B / XOR B,A / XOR A,B: el CC queda como el del ultimo XOR, cuyo resultado es el B original
+    Registros[17] = 0;
     if (valorB == 0)
         Registros[17] = Registros[17] | (1 << 30); // prende Z
-    if (valorA < 0)
+    if (valorB < 0)
         Registros[17] = Registros[17] | (1 << 31); // prende N
 
     GuardarDestino(Registros[2], valorB, MemoriaPrincipal, Registros, TablaSegmentos);
     GuardarDestino(Registros[3], valorA, MemoriaPrincipal, Registros, TablaSegmentos);
 }
 
-void op_PUSH(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+// ---------- pila ----------
+
+// PUSH/CALL pasos 1 y 2: decrementa SP en 4 y valida. Devuelve la direccion fisica donde se va a escribir.
+static int PrepararApilar(int Registros[], Segmento TablaSegmentos[])
 {
+    if (Registros[29] == -1) // no hay Stack Segment
+        ErrorPila("STACK OVERFLOW");
+
     int segSS = (Registros[7] >> 16) & 0xFFFF;
     int offsetSP = (Registros[7] & 0xFFFF) - 4;
 
-    // Chequeo de STACK OVERFLOW: offset menor a 0
-    if (offsetSP < 0)
-    {
-        printf("\n[ERROR] STACK OVERFLOW\n");
-        exit(1);
-    }
+    if (offsetSP < 0) // SP quedaria por debajo del comienzo del SS
+        ErrorPila("STACK OVERFLOW");
+    if (!SegmentoValido(segSS, TablaSegmentos) || offsetSP + 4 > TablaSegmentos[segSS].size)
+        ErrorPila("Fallo de segmento en la pila");
 
     Registros[7] = (segSS << 16) | (offsetSP & 0xFFFF);
+    return TablaSegmentos[segSS].base + offsetSP;
+}
 
-    int valor = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
-    int dirFisica = TablaSegmentos[segSS].base + offsetSP;
-
+// escribe 4 bytes big endian en la pila y deja LAR/MAR/MBR
+static void EscribirPila(int dirFisica, int valor, unsigned char MemoriaPrincipal[], int Registros[])
+{
+    Registros[4] = Registros[7];                                     // LAR = SP (direccion logica)
+    Registros[5] = (4 << 16) | (dirFisica & 0xFFFF);                 // MAR
+    Registros[6] = valor;                                            // MBR
     MemoriaPrincipal[dirFisica + 0] = (valor >> 24) & 0xFF;
     MemoriaPrincipal[dirFisica + 1] = (valor >> 16) & 0xFF;
     MemoriaPrincipal[dirFisica + 2] = (valor >> 8) & 0xFF;
     MemoriaPrincipal[dirFisica + 3] = valor & 0xFF;
 }
 
-void op_POP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+// POP/RET pasos 1 y 2: lee 4 bytes del tope. No modifica SP. Valida STACK UNDERFLOW.
+static int LeerTopePila(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    if (Registros[29] == -1)
+        ErrorPila("STACK UNDERFLOW");
+
+    int segSS = (Registros[7] >> 16) & 0xFFFF;
+    int offsetSP = Registros[7] & 0xFFFF;
+
+    if (!SegmentoValido(segSS, TablaSegmentos) || offsetSP + 4 > TablaSegmentos[segSS].size)
+        ErrorPila("STACK UNDERFLOW");
+
+    int dirFisica = TablaSegmentos[segSS].base + offsetSP;
+    int valor = ((unsigned char)MemoriaPrincipal[dirFisica + 0] << 24) |
+                ((unsigned char)MemoriaPrincipal[dirFisica + 1] << 16) |
+                ((unsigned char)MemoriaPrincipal[dirFisica + 2] << 8) |
+                ((unsigned char)MemoriaPrincipal[dirFisica + 3]);
+
+    Registros[4] = Registros[7];                     // LAR
+    Registros[5] = (4 << 16) | (dirFisica & 0xFFFF); // MAR
+    Registros[6] = valor;                            // MBR
+    return valor;
+}
+
+static void DescartarTopePila(int Registros[])
 {
     int segSS = (Registros[7] >> 16) & 0xFFFF;
     int offsetSP = Registros[7] & 0xFFFF;
-    int tamSS = TablaSegmentos[segSS].size;
-
-    // Chequeo de STACK UNDERFLOW: pila vacia
-    if (offsetSP + 4 > tamSS)
-    {
-        printf("\n[ERROR] STACK UNDERFLOW\n");
-        exit(1);
-    }
-
-    int dirFisica = TablaSegmentos[segSS].base + offsetSP;
-    int valorExtraido = ((unsigned char)MemoriaPrincipal[dirFisica + 0] << 24) |
-                        ((unsigned char)MemoriaPrincipal[dirFisica + 1] << 16) |
-                        ((unsigned char)MemoriaPrincipal[dirFisica + 2] << 8) |
-                        ((unsigned char)MemoriaPrincipal[dirFisica + 3]);
-
-    GuardarDestino(Registros[2], valorExtraido, MemoriaPrincipal, Registros, TablaSegmentos);
-
     Registros[7] = (segSS << 16) | ((offsetSP + 4) & 0xFFFF);
+}
+
+void op_PUSH(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int dirFisica = PrepararApilar(Registros, TablaSegmentos);                                     // 1 y 2
+    int valor = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);   // 3 y 4 (con extension de signo)
+    EscribirPila(dirFisica, valor, MemoriaPrincipal, Registros);                                   // 5
+}
+
+void op_POP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
+{
+    int valorExtraido = LeerTopePila(MemoriaPrincipal, Registros, TablaSegmentos);
+    GuardarDestino(Registros[2], valorExtraido, MemoriaPrincipal, Registros, TablaSegmentos);
+    DescartarTopePila(Registros);
 }
 
 void op_CALL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    // CALL equivale a PUSH IP y luego JMP destino
-    int segSS = (Registros[7] >> 16) & 0xFFFF;
-    int offsetSP = (Registros[7] & 0xFFFF) - 4;
+    // CALL equivale a PUSH IP y luego JMP destino (el IP ya apunta a la siguiente instruccion)
+    int dirFisica = PrepararApilar(Registros, TablaSegmentos);
+    EscribirPila(dirFisica, Registros[0], MemoriaPrincipal, Registros);
 
-    // Chequeo de STACK OVERFLOW: offset dentro del segmento menor a 0
-    if (offsetSP < 0)
-    {
-        printf("\n[ERROR] STACK OVERFLOW\n");
-        exit(1);
-    }
-
-    // Actualizar SP con el nuevo offset
-    Registros[7] = (segSS << 16) | (offsetSP & 0xFFFF);
-
-    // Guardar la dirección de retorno (el IP ya apunta a la siguiente instrucción)
-    int ipRetorno = Registros[0];
-    int dirFisica = TablaSegmentos[segSS].base + offsetSP;
-
-    MemoriaPrincipal[dirFisica + 0] = (ipRetorno >> 24) & 0xFF;
-    MemoriaPrincipal[dirFisica + 1] = (ipRetorno >> 16) & 0xFF;
-    MemoriaPrincipal[dirFisica + 2] = (ipRetorno >> 8) & 0xFF;
-    MemoriaPrincipal[dirFisica + 3] = ipRetorno & 0xFF;
-
-    // Salto al destino indicado por OP1
     int destino = ObtenerValorOperando(Registros[2], MemoriaPrincipal, Registros, TablaSegmentos);
     SaltarA(Registros, destino);
 }
@@ -831,24 +898,7 @@ void op_CALL(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSe
 void op_RET(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
     // RET equivale a POP IP
-    int segSS = (Registros[7] >> 16) & 0xFFFF;
-    int offsetSP = Registros[7] & 0xFFFF;
-    int tamSS = TablaSegmentos[segSS].size;
-
-    // Chequeo de STACK UNDERFLOW: intentar desapilar más allá del límite del segmento
-    if (offsetSP + 4 > tamSS)
-    {
-        printf("\n[ERROR] STACK UNDERFLOW\n");
-        exit(1);
-    }
-
-    int dirFisica = TablaSegmentos[segSS].base + offsetSP;
-    int ipExtraido = ((unsigned char)MemoriaPrincipal[dirFisica + 0] << 24) |
-                     ((unsigned char)MemoriaPrincipal[dirFisica + 1] << 16) |
-                     ((unsigned char)MemoriaPrincipal[dirFisica + 2] << 8) |
-                     ((unsigned char)MemoriaPrincipal[dirFisica + 3]);
-
-    // Avanzar SP y restaurar IP
-    Registros[7] = (segSS << 16) | ((offsetSP + 4) & 0xFFFF);
+    int ipExtraido = LeerTopePila(MemoriaPrincipal, Registros, TablaSegmentos);
+    DescartarTopePila(Registros);
     Registros[0] = ipExtraido;
 }
