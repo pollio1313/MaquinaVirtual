@@ -808,7 +808,6 @@ void op_SWAP(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSe
     GuardarDestino(Registros[3], valorA, MemoriaPrincipal, Registros, TablaSegmentos);
 }
 
-
 // ---------- pila ----------
 
 // PUSH/CALL pasos 1 y 2: decrementa SP en 4 y valida. Devuelve la direccion fisica donde se va a escribir.

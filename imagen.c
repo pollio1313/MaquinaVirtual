@@ -4,10 +4,10 @@
 #include "imagen.h"
 
 // El main asigna gArchivoVMI y gTamMemoriaBytes antes de llamar a EjecutarMaquina.
-char *gArchivoVMI = NULL;     // NULL = no se paso .vmi. Los breakpoints se ignoran
-int gTamMemoriaBytes = 0;     
-int gPasoAPaso = 0;           
-int gBreakpointEjecutado = 0; 
+char *gArchivoVMI = NULL;     // NULL = no se paso .vmi -> los breakpoints se ignoran
+int gTamMemoriaBytes = 0;     // tamaño de la memoria principal en bytes
+int gPasoAPaso = 0;           // 1 = despues de cada instruccion hay un nuevo breakpoint
+int gBreakpointEjecutado = 0; // el ciclo lo apaga antes de cada instruccion; Breakpoint() lo prende
 
 static void EscribirWordBE(FILE *f, uint16_t v)
 {
@@ -33,7 +33,7 @@ void GenerarImagen(unsigned char MemoriaPrincipal[], int Registros[], Segmento T
         exit(1);
     }
 
-    // cabecera
+    // header
     fwrite("VMI26", 1, 5, f);
     fputc(1, f); // version
     EscribirWordBE(f, (uint16_t)(gTamMemoriaBytes / 1024));
@@ -42,20 +42,22 @@ void GenerarImagen(unsigned char MemoriaPrincipal[], int Registros[], Segmento T
     for (int i = 0; i < 32; i++)
         EscribirIntBE(f, (uint32_t)Registros[i]);
 
-    // tabla de descriptores: base (2 bytes) + tamaño (2 bytes). Las entradas sin usar quedan en 0xFFFF
+    // tabla de descriptores: base (2 bytes) + tamaño (2 bytes), las entradas sin usar quedan en 0xFFFF
     for (int i = 0; i < 8; i++)
     {
         EscribirWordBE(f, (uint16_t)TablaSegmentos[i].base);
         EscribirWordBE(f, (uint16_t)TablaSegmentos[i].size);
     }
 
+    // memoria principal completa
     fwrite(MemoriaPrincipal, 1, gTamMemoriaBytes, f);
     fclose(f);
 }
 
+// SYS 0xF: no usa ni modifica registros (salvo lo que haga el usuario con g / q / Enter)
 void Breakpoint(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    if (gArchivoVMI == NULL)
+    if (gArchivoVMI == NULL) // sin .vmi el breakpoint se ignora
         return;
 
     gBreakpointEjecutado = 1;
@@ -76,11 +78,12 @@ void Breakpoint(unsigned char MemoriaPrincipal[], int Registros[], Segmento Tabl
             return;
         }
         if (linea[0] == 'q')
-            exit(0);
+            exit(0); // el .vmi queda como se genero recien
         if (linea[0] == '\n')
         {
             gPasoAPaso = 1;
             return;
         }
+        // cualquier otra cosa: se vuelve a preguntar
     }
 }
