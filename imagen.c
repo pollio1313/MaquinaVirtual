@@ -4,10 +4,10 @@
 #include "imagen.h"
 
 // El main asigna gArchivoVMI y gTamMemoriaBytes antes de llamar a EjecutarMaquina.
-char *gArchivoVMI = NULL;     // NULL = no se paso .vmi -> los breakpoints se ignoran
-int gTamMemoriaBytes = 0;     // tamaño de la memoria principal en bytes
-int gPasoAPaso = 0;           // 1 = despues de cada instruccion hay un nuevo breakpoint
-int gBreakpointEjecutado = 0; // el ciclo lo apaga antes de cada instruccion; Breakpoint() lo prende
+char *gArchivoVMI = NULL;     
+int gTamMemoriaBytes = 0;     
+int gPasoAPaso = 0;           
+int gBreakpointEjecutado = 0; 
 
 static void EscribirWordBE(FILE *f, uint16_t v)
 {
@@ -33,7 +33,7 @@ void GenerarImagen(unsigned char MemoriaPrincipal[], int Registros[], Segmento T
         exit(1);
     }
 
-    // header
+    // cabecera
     fwrite("VMI26", 1, 5, f);
     fputc(1, f); // version
     EscribirWordBE(f, (uint16_t)(gTamMemoriaBytes / 1024));
@@ -49,7 +49,6 @@ void GenerarImagen(unsigned char MemoriaPrincipal[], int Registros[], Segmento T
         EscribirWordBE(f, (uint16_t)TablaSegmentos[i].size);
     }
 
-    // memoria principal completa
     fwrite(MemoriaPrincipal, 1, gTamMemoriaBytes, f);
     fclose(f);
 }
@@ -57,7 +56,7 @@ void GenerarImagen(unsigned char MemoriaPrincipal[], int Registros[], Segmento T
 // SYS 0xF: no usa ni modifica registros (salvo lo que haga el usuario con g / q / Enter)
 void Breakpoint(unsigned char MemoriaPrincipal[], int Registros[], Segmento TablaSegmentos[])
 {
-    if (gArchivoVMI == NULL) // sin .vmi el breakpoint se ignora
+    if (gArchivoVMI == NULL)
         return;
 
     gBreakpointEjecutado = 1;
