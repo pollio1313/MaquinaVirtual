@@ -4,10 +4,10 @@
 #include "imagen.h"
 
 // El main asigna gArchivoVMI y gTamMemoriaBytes antes de llamar a EjecutarMaquina.
-char *gArchivoVMI = NULL;     
-int gTamMemoriaBytes = 0;     
-int gPasoAPaso = 0;           
-int gBreakpointEjecutado = 0; 
+char *gArchivoVMI = NULL;
+int gTamMemoriaBytes = 0;
+int gPasoAPaso = 0;
+int gBreakpointEjecutado = 0;
 
 static void EscribirWordBE(FILE *f, uint16_t v)
 {
@@ -67,6 +67,7 @@ void Breakpoint(unsigned char MemoriaPrincipal[], int Registros[], Segmento Tabl
     {
         printf("[BREAKPOINT] g = continuar | q = salir | Enter = paso a paso: ");
         fflush(stdout);
+        // fflush fuerza a tirar el buffer de salida(stdout), para que el mensaje se vea antes de leer la entrada del usuario
 
         if (fgets(linea, sizeof(linea), stdin) == NULL) // EOF: se trata como 'q'
             exit(0);

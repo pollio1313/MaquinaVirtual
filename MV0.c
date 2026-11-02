@@ -19,8 +19,8 @@ struct operando
     int cantBytes;
 };
 
-#define COL_BYTES 20                // ancho de la columna de bytes del desensamblador (7 bytes: "XX XX XX XX XX XX XX")
-#define MAX_PARAMS 64               // maximo de parametros de -p (incluye el nombre del .vmx)
+#define COL_BYTES 20                 // ancho de la columna de bytes del desensamblador (7 bytes: "XX XX XX XX XX XX XX")
+#define MAX_PARAMS 64                // maximo de parametros de -p (incluye el nombre del .vmx)
 #define EJECUTAR_TRAS_DESENSAMBLAR 1 // 1: -d muestra el codigo y luego ejecuta; 0: -d solo muestra y termina
 
 const struct operando tablaOperandos[] = {
@@ -383,7 +383,9 @@ static void FormatearOperando(int tipoOp, unsigned char bytes[], char *dst, size
         int cantMod = (modReg >> 5) & 0x07;
 
         // prefijo segun el modificador (sin prefijo en programas v1, donde esos bits no se usan)
-        const char *pref = (cantMod == 1) ? "b" : (cantMod == 2) ? "w" : (cantMod == 4) ? "l" : "";
+        const char *pref = (cantMod == 1) ? "b" : (cantMod == 2) ? "w"
+                                              : (cantMod == 4)   ? "l"
+                                                                 : "";
 
         // siempre registro+offset, incluso con offset 0 (ej: b[DS+0])
         if (offset >= 0)
@@ -519,13 +521,10 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
     int tamCS = TablaSegmentos[segCS].size;
     unsigned char *codigo = MemoriaPrincipal + baseCS;
 
-    // Registros[0] = Registros[26]; // IP se inicia aputando a la primera instruccion del codigo, mismo valor que CS
-    // el IP ya viene inicializado (entry point o imagen), por eso la comenté
-
     while (((Registros[0] >> 16) & 0xFFFF) == segCS && (Registros[0] & 0xFFFF) < tamCS) // cambie el while a una ver mas simple aprovechando las 4 var que agregué arriba
-    {                                       // Se itera hasta que IP apunte fuera del limite del segmento de codigo
+    {                                                                                   // Se itera hasta que IP apunte fuera del limite del segmento de codigo
         pos = Registros[0] & 0xFFFF;
-        int ipInstr = pos; // offset de la instruccion actual (para mensajes de error)
+        int ipInstr = pos;                                // offset de la instruccion actual (para mensajes de error)
         codOperacion = Registros[1] = codigo[pos] & 0x1F; // decodifico y guardo el codigo limpio en OPC
         cantOP = tablaInstrucciones[codOperacion].cantOP;
 
@@ -594,20 +593,6 @@ void EjecutarMaquina(unsigned char MemoriaPrincipal[], Segmento TablaSegmentos[]
         }
 
         Registros[0] = (Registros[0] & 0xFFFF0000) | ((pos + 1) & 0xFFFF); // IP -> siguiente instruccion
-        /*En ese punto pos apunta al último byte de la instrucción (los ++pos fueron consumiendo los operandos), así que
-        pos + 1 es el offset de la siguiente. La línea conserva los 16 bits altos (el segmento) y reemplaza los bajos.
-        Tres razones para hacerlo antes y no después, como estaba:
-
-        La imagen. SYS 0xF guarda los registros dentro de op_SYS, o sea, durante la ejecución.
-        Si el IP todavía apunta al SYS, al retomar desde el .vmi vuelve a ejecutar el mismo breakpoint, y así indefinidamente.
-
-        CALL. El TP dice que al ejecutarse, el IP “ya se encuentra apuntando a la siguiente instrucción”,
-        porque eso es lo que se apila como dirección de retorno.
-
-        Un bug latente del esquema anterior.
-        Detectabas el salto con if (Registros[0] == ipPrevio).
-        Un salto cuyo destino sea la propia instrucción (un JMP a sí mismo, por ejemplo) se confundía con “no hubo salto” y el IP avanzaba igual.
-        Ahora los saltos simplemente pisan el IP ya avanzado y no hace falta comparar nada, por eso desaparece ipPrevio.*/
 
         if (codOperacion < 0 || codOperacion > 0x1F || tablaInstrucciones[codOperacion].ejecutar == NULL)
         {
